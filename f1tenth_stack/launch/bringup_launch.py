@@ -22,13 +22,12 @@
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import Command
 from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument
-from launch.actions import IncludeLaunchDescription
-from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
+from launch.conditions import IfCondition
 from ament_index_python.packages import get_package_share_directory
 import os
+
 
 def generate_launch_description():
     joy_teleop_config = os.path.join(
@@ -68,8 +67,12 @@ def generate_launch_description():
         'mux_config',
         default_value=mux_config,
         description='Descriptions for ackermann mux configs')
+    vesc_to_odom_la = DeclareLaunchArgument(
+        'launch_vesc_to_odom',
+        default_value='true',
+        description='Launch vesc_to_odom node and its odom->base_link TF')
 
-    ld = LaunchDescription([joy_la, vesc_la, sensors_la, mux_la])
+    ld = LaunchDescription([joy_la, vesc_la, sensors_la, mux_la, vesc_to_odom_la])
 
     joy_node = Node(
         package='joy',
@@ -93,18 +96,13 @@ def generate_launch_description():
         package='vesc_ackermann',
         executable='vesc_to_odom_node',
         name='vesc_to_odom_node',
-        parameters=[LaunchConfiguration('vesc_config')]
+        parameters=[LaunchConfiguration('vesc_config')],
+        condition=IfCondition(LaunchConfiguration('launch_vesc_to_odom'))
     )
     vesc_driver_node = Node(
         package='vesc_driver',
         executable='vesc_driver_node',
         name='vesc_driver_node',
-        parameters=[LaunchConfiguration('vesc_config')]
-    )
-    throttle_interpolator_node = Node(
-        package='f1tenth_stack',
-        executable='throttle_interpolator',
-        name='throttle_interpolator',
         parameters=[LaunchConfiguration('vesc_config')]
     )
     urg_node = Node(
@@ -133,7 +131,6 @@ def generate_launch_description():
     ld.add_action(ackermann_to_vesc_node)
     ld.add_action(vesc_to_odom_node)
     ld.add_action(vesc_driver_node)
-    # ld.add_action(throttle_interpolator_node)
     ld.add_action(urg_node)
     ld.add_action(ackermann_mux_node)
     ld.add_action(static_tf_node)
