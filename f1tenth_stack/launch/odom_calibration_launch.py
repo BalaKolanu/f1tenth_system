@@ -27,13 +27,14 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.actions import LogInfo
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    vesc_linear_odom_config = os.path.join(
+    vesc_config = os.path.join(
         get_package_share_directory('f1tenth_stack'),
         'config',
-        'vesc_linear_odom.yaml',
+        'vesc.yaml',
     )
 
     bringup_launch = IncludeLaunchDescription(
@@ -46,7 +47,6 @@ def generate_launch_description():
         ),
         launch_arguments={
             'launch_vesc_to_odom': 'true',
-            'vesc_config': vesc_linear_odom_config,
         }.items(),
     )
 
@@ -60,19 +60,54 @@ def generate_launch_description():
         )
     )
 
+    scanmatching_reference_pose_node = Node(
+        package='f1tenth_stack',
+        executable='tf_pose_reference_publisher',
+        name='scanmatching_reference_pose_publisher',
+        output='screen',
+        parameters=[
+            {
+                'source_frame': 'map',
+                'target_frame': 'base_link',
+                'output_topic': '/scanmatching_odom/pose',
+                'publish_frequency': 20.0,
+            },
+        ],
+    )
+
+    linear_odom_calibrator_node = Node(
+        package='f1tenth_stack',
+        executable='linear_odom_calibrator',
+        name='linear_odom_calibrator',
+        output='screen',
+        parameters=[
+            {
+                'odom_topic': '/odom',
+                'reference_topic': '/scanmatching_odom/pose',
+                'sampling_frequency': 20.0,
+                'max_yaw_rate': 0.10,
+                'max_pair_jump': 0.25,
+                'min_pair_step': 0.002,
+                'min_reference_distance': 2.0,
+                'vesc_config_path': vesc_config,
+            },
+        ],
+    )
+
     print_usage_instructions = LogInfo(
-        msg='Scan-matching mapping mode with linear odom enabled '
-            '(steering-based odom yaw disabled).\n'
-            'To save the resultant map, keep this session running, open a new '
-            'terminal and run:\n'
-            '\tros2 run nav2_map_server map_saver_cli -f your_map_file_name '
-            '--ros-args -p map_subscribe_transient_local:=true\n'
+        msg='Odom calibration mode started.\n'
+            'Use /odom as wheel-odom estimate and /scanmatching_odom/pose as reference.\n'
+            'Reference is derived from TF map->base_link.\n'
+            'Drive mostly straight while steering is centered.\n'
+            'Stop this launch with Ctrl+C to print calibrated linear odom values.\n'
     )
 
     return LaunchDescription(
         [
             bringup_launch,
             scanmatching_slam_launch,
+            scanmatching_reference_pose_node,
+            linear_odom_calibrator_node,
             print_usage_instructions,
         ]
     )

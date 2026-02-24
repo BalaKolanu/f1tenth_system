@@ -30,12 +30,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description():
-    vesc_linear_odom_config = os.path.join(
-        get_package_share_directory('f1tenth_stack'),
-        'config',
-        'vesc_linear_odom.yaml',
-    )
-
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -46,23 +40,21 @@ def generate_launch_description():
         ),
         launch_arguments={
             'launch_vesc_to_odom': 'true',
-            'vesc_config': vesc_linear_odom_config,
         }.items(),
     )
 
-    scanmatching_slam_launch = IncludeLaunchDescription(
+    odom_only_slam_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
                 get_package_share_directory('f1tenth_stack'),
                 'launch',
-                'scanmatching_slam_launch.py',
+                'odom_only_slam_launch.py',
             )
         )
     )
 
     print_usage_instructions = LogInfo(
-        msg='Scan-matching mapping mode with linear odom enabled '
-            '(steering-based odom yaw disabled).\n'
+        msg='ODOM-ONLY mapping mode (scan matching disabled).\n'
             'To save the resultant map, keep this session running, open a new '
             'terminal and run:\n'
             '\tros2 run nav2_map_server map_saver_cli -f your_map_file_name '
@@ -72,7 +64,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             bringup_launch,
-            scanmatching_slam_launch,
+            odom_only_slam_launch,
             print_usage_instructions,
         ]
     )
