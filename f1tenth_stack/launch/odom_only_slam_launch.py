@@ -28,9 +28,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    # Odom-assisted scan matching: slam_toolbox consumes odom->base_link from vesc_to_odom
-    # and publishes map->odom for a consistent global map frame.
-    scanmatching_slam_node = Node(
+    odom_only_slam_node = Node(
         package='slam_toolbox',
         executable='async_slam_toolbox_node',
         name='slam_node',
@@ -39,7 +37,7 @@ def generate_launch_description():
             os.path.join(
                 get_package_share_directory('f1tenth_stack'),
                 'config',
-                'slam_toolbox_scanmatching.yaml',
+                'slam_toolbox_odom_only.yaml',
             ),
             {
                 'map_frame': 'map',
@@ -49,10 +47,7 @@ def generate_launch_description():
                 'use_sim_time': False,
             },
         ],
-        remappings=[
-            ('pose', '/scanmatching_odom/pose'),
-        ],
         arguments=['--ros-args', '--log-level', 'warn'],
     )
 
-    return LaunchDescription([scanmatching_slam_node])
+    return LaunchDescription([odom_only_slam_node])

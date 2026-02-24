@@ -27,8 +27,9 @@ slam_node:
     stack_size_to_use: 40000000
     enable_interactive_mode: false
 
-    use_scan_matching: true
-    use_scan_barycenter: true
+    # Odom-only mapping mode: use odom poses as-is without scan-matching correction.
+    use_scan_matching: false
+    use_scan_barycenter: false
 
     scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 10.0

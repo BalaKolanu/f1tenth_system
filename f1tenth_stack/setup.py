@@ -26,7 +26,9 @@ setup(
         'console_scripts': [
             'throttle_interpolator = f1tenth_stack.throttle_interpolator:main',
             'tf_publisher = f1tenth_stack.tf_publisher:main',
-            'scanmatching_tf_publisher = f1tenth_stack.scanmatching_tf_publisher:main'
+            'scanmatching_tf_publisher = f1tenth_stack.scanmatching_tf_publisher:main',
+            'tf_pose_reference_publisher = f1tenth_stack.tf_pose_reference_publisher:main',
+            'linear_odom_calibrator = f1tenth_stack.linear_odom_calibrator:main',
         ],
     },
 )
