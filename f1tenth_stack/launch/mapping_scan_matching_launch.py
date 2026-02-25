@@ -27,6 +27,7 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.actions import LogInfo
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -47,7 +48,22 @@ def generate_launch_description():
         launch_arguments={
             'launch_vesc_to_odom': 'true',
             'vesc_config': vesc_linear_odom_config,
+            'motor_speed_output_topic': 'commands/motor/unclipped_speed',
         }.items(),
+    )
+
+    speed_clipper_node = Node(
+        package='f1tenth_stack',
+        executable='speed_clipper',
+        name='mapping_speed_clipper',
+        parameters=[
+            {
+                'input_topic': 'commands/motor/unclipped_speed',
+                'output_topic': 'commands/motor/speed',
+                'min_value': -2500.0,
+                'max_value': 2500.0,
+            }
+        ],
     )
 
     scanmatching_slam_launch = IncludeLaunchDescription(
@@ -72,6 +88,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             bringup_launch,
+            speed_clipper_node,
             scanmatching_slam_launch,
             print_usage_instructions,
         ]
