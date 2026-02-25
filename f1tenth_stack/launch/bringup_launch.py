@@ -71,19 +71,8 @@ def generate_launch_description():
         'launch_vesc_to_odom',
         default_value='true',
         description='Launch vesc_to_odom node and its odom->base_link TF')
-    motor_speed_output_topic_la = DeclareLaunchArgument(
-        'motor_speed_output_topic',
-        default_value='commands/motor/speed',
-        description='Motor speed topic published by ackermann_to_vesc_node')
 
-    ld = LaunchDescription([
-        joy_la,
-        vesc_la,
-        sensors_la,
-        mux_la,
-        vesc_to_odom_la,
-        motor_speed_output_topic_la,
-    ])
+    ld = LaunchDescription([joy_la, vesc_la, sensors_la, mux_la, vesc_to_odom_la])
 
     joy_node = Node(
         package='joy',
@@ -101,10 +90,7 @@ def generate_launch_description():
         package='vesc_ackermann',
         executable='ackermann_to_vesc_node',
         name='ackermann_to_vesc_node',
-        parameters=[LaunchConfiguration('vesc_config')],
-        remappings=[
-            ('commands/motor/speed', LaunchConfiguration('motor_speed_output_topic'))
-        ]
+        parameters=[LaunchConfiguration('vesc_config')]
     )
     vesc_to_odom_node = Node(
         package='vesc_ackermann',
