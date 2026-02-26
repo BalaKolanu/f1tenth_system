@@ -77,6 +77,16 @@ def generate_launch_description():
         default_value='1.0',
         description='Scale factor applied to wheel odom linear speed in fusion',
     )
+    amcl_log_level_la = DeclareLaunchArgument(
+        'amcl_log_level',
+        default_value='error',
+        description='Log level for AMCL process (debug, info, warn, error, fatal)',
+    )
+    vesc_driver_log_level_la = DeclareLaunchArgument(
+        'vesc_driver_log_level',
+        default_value='warn',
+        description='Log level for vesc_driver_node (debug, info, warn, error, fatal)',
+    )
 
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -90,6 +100,7 @@ def generate_launch_description():
             'launch_vesc_to_odom': 'true',
             'vesc_config': vesc_imu_fusion_config,
             'launch_usb_imu': 'true',
+            'vesc_driver_log_level': LaunchConfiguration('vesc_driver_log_level'),
         }.items(),
     )
 
@@ -133,6 +144,11 @@ def generate_launch_description():
         executable='amcl',
         name='amcl',
         output='screen',
+        arguments=[
+            '--ros-args',
+            '--log-level',
+            LaunchConfiguration('amcl_log_level'),
+        ],
         parameters=[
             LaunchConfiguration('amcl_params'),
             {
@@ -171,6 +187,8 @@ def generate_launch_description():
             imu_yaw_offset_la,
             imu_yaw_alpha_la,
             imu_linear_speed_scale_la,
+            amcl_log_level_la,
+            vesc_driver_log_level_la,
             bringup_launch,
             imu_odom_fusion_node,
             map_server_node,
