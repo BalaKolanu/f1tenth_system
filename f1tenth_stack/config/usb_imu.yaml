@@ -1,0 +1,13 @@
+usb_imu_serial_node:
+  ros__parameters:
+    port: "/dev/serial/by-id/usb-Arduino_Seeed_XIAO_nRF52840_Sense_EECCD63C145E8932-if00"
+    baudrate: 115200
+    imu_topic: "/sensors/imu/raw"
+    frame_id: "imu_frame"
+    accel_scale: 9.80665
+    orientation_covariance: 0.02
+    linear_acceleration_covariance: 0.5
+    angular_velocity_covariance: -1.0
+    poll_period_sec: 0.01
+    reconnect_period_sec: 1.0
+    max_buffer_chars: 8192

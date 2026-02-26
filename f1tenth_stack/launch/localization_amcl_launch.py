@@ -34,34 +34,48 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     f1tenth_share = get_package_share_directory('f1tenth_stack')
-    vesc_linear_odom_config = os.path.join(
-        f1tenth_share,
-        'config',
-        'vesc_linear_odom.yaml',
-    )
-    slam_localization_config = os.path.join(
-        f1tenth_share,
-        'config',
-        'slam_toolbox_localization_scanmatching.yaml',
-    )
 
     default_map_yaml = '/home/nvidia/spring26_ws/maps/apt_floor_2.yaml'
-    default_posegraph_file = '/home/nvidia/spring26_ws/maps/apt_floor_2.posegraph'
+    default_amcl_params = os.path.join(
+        f1tenth_share,
+        'config',
+        'amcl_localization.yaml',
+    )
+    vesc_imu_fusion_config = os.path.join(
+        f1tenth_share,
+        'config',
+        'vesc_imu_fusion.yaml',
+    )
 
     map_yaml_la = DeclareLaunchArgument(
         'map_yaml',
         default_value=default_map_yaml,
-        description='Occupancy-grid map yaml used by map_server for visualization',
+        description='Path to occupancy map yaml file',
     )
-    posegraph_file_la = DeclareLaunchArgument(
-        'posegraph_file',
-        default_value=default_posegraph_file,
-        description='Serialized slam_toolbox posegraph file for localization',
+    amcl_params_la = DeclareLaunchArgument(
+        'amcl_params',
+        default_value=default_amcl_params,
+        description='Path to AMCL parameter yaml file',
     )
     use_sim_time_la = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
         description='Use simulation clock',
+    )
+    imu_yaw_offset_la = DeclareLaunchArgument(
+        'imu_yaw_offset_rad',
+        default_value='0.0',
+        description='Static yaw offset added to IMU heading (radians)',
+    )
+    imu_yaw_alpha_la = DeclareLaunchArgument(
+        'imu_yaw_alpha',
+        default_value='0.3',
+        description='IMU yaw smoothing factor in [0,1], higher tracks faster',
+    )
+    imu_linear_speed_scale_la = DeclareLaunchArgument(
+        'imu_linear_speed_scale',
+        default_value='1.0',
+        description='Scale factor applied to wheel odom linear speed in fusion',
     )
 
     bringup_launch = IncludeLaunchDescription(
@@ -74,9 +88,31 @@ def generate_launch_description():
         ),
         launch_arguments={
             'launch_vesc_to_odom': 'true',
-            'vesc_config': vesc_linear_odom_config,
+            'vesc_config': vesc_imu_fusion_config,
             'launch_usb_imu': 'true',
         }.items(),
+    )
+
+    imu_odom_fusion_node = Node(
+        package='f1tenth_stack',
+        executable='imu_odom_fusion_node',
+        name='imu_odom_fusion_node',
+        output='screen',
+        parameters=[
+            {
+                'imu_topic': '/sensors/imu/raw',
+                'wheel_odom_topic': '/odom',
+                'fused_odom_topic': '/odometry/imu_fused',
+                'odom_frame': 'odom',
+                'base_frame': 'base_link',
+                'publish_tf': True,
+                'linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
+                'use_first_imu_as_zero': True,
+                'yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
+                'yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
+                'max_dt_sec': 0.2,
+            }
+        ],
     )
 
     map_server_node = Node(
@@ -86,86 +122,60 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {
-                'yaml_filename': LaunchConfiguration('map_yaml'),
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'yaml_filename': LaunchConfiguration('map_yaml'),
             }
         ],
     )
 
-    map_lifecycle_manager = Node(
+    amcl_node = Node(
+        package='nav2_amcl',
+        executable='amcl',
+        name='amcl',
+        output='screen',
+        parameters=[
+            LaunchConfiguration('amcl_params'),
+            {
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+            },
+        ],
+    )
+
+    lifecycle_manager_node = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
-        name='lifecycle_manager_map_server',
+        name='lifecycle_manager_localization',
         output='screen',
         parameters=[
             {
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
                 'autostart': True,
-                'node_names': ['map_server'],
+                'node_names': ['map_server', 'amcl'],
             }
         ],
-    )
-
-    joy_gated_localization_node = Node(
-        package='f1tenth_stack',
-        executable='joy_gated_localization',
-        name='joy_gated_localization',
-        output='screen',
-        parameters=[
-            {
-                'joy_topic': '/joy',
-                'enable_button_index': 0,
-                'joy_timeout_sec': 0.5,
-                'input_scan_topic': '/scan',
-                'output_scan_topic': '/scan_localization',
-                'input_pose_topic': '/scanmatching_localization/pose_raw',
-                'output_pose_topic': '/scanmatching_localization/pose',
-                'enabled_topic': '/scanmatching_localization/enabled',
-            }
-        ],
-    )
-
-    slam_localization_node = Node(
-        package='slam_toolbox',
-        executable='localization_slam_toolbox_node',
-        name='slam_localization_node',
-        output='screen',
-        parameters=[
-            slam_localization_config,
-            {
-                'use_sim_time': LaunchConfiguration('use_sim_time'),
-                'map_file_name': LaunchConfiguration('posegraph_file'),
-                'map_frame': 'map',
-                'base_frame': 'base_link',
-                'odom_frame': 'odom',
-                'scan_topic': '/scan_localization',
-                'transform_publish_period': 0.02,
-            },
-        ],
-        remappings=[
-            ('pose', '/scanmatching_localization/pose_raw'),
-        ],
-        arguments=['--ros-args', '--log-level', 'warn'],
     )
 
     print_usage_instructions = LogInfo(
-        msg='Localization mode ready.\n'
-            'Hold joystick button index 0 to enable scan matching updates.\n'
-            'Pose topic: /scanmatching_localization/pose\n'
-            'Enabled state: /scanmatching_localization/enabled\n'
-            'Map topic (map_server): /map\n'
+        msg='AMCL localization mode started.\n'
+            'In RViz:\n'
+            '  1) Set Fixed Frame to map\n'
+            '  2) Map display topic = /map, Durability = Transient Local\n'
+            '  3) Use "2D Pose Estimate" to initialize AMCL pose\n'
     )
 
     return LaunchDescription(
         [
             map_yaml_la,
-            posegraph_file_la,
+            amcl_params_la,
             use_sim_time_la,
+            imu_yaw_offset_la,
+            imu_yaw_alpha_la,
+            imu_linear_speed_scale_la,
             bringup_launch,
+            imu_odom_fusion_node,
             map_server_node,
-            map_lifecycle_manager,
-            joy_gated_localization_node,
-            slam_localization_node,
+            amcl_node,
+            lifecycle_manager_node,
             print_usage_instructions,
         ]
     )

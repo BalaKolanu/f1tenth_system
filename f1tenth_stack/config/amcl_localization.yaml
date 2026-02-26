@@ -1,0 +1,48 @@
+amcl:
+  ros__parameters:
+    use_sim_time: false
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    global_frame_id: "map"
+    scan_topic: /scan
+
+    tf_broadcast: true
+    transform_tolerance: 0.15
+
+    laser_model_type: "likelihood_field"
+    laser_likelihood_max_dist: 1.5
+    laser_max_range: 10.0
+    laser_min_range: -1.0
+    max_beams: 100
+
+    min_particles: 1000
+    max_particles: 4000
+    pf_err: 0.02
+    pf_z: 0.99
+    resample_interval: 1
+
+    # Increase motion-model uncertainty so scan likelihood has more influence.
+    robot_model_type: "differential"
+    alpha1: 0.6
+    alpha2: 0.6
+    alpha3: 0.6
+    alpha4: 0.6
+    alpha5: 0.6
+
+    update_min_d: 0.03
+    update_min_a: 0.03
+
+    do_beamskip: false
+    beam_skip_distance: 0.5
+    beam_skip_threshold: 0.3
+    beam_skip_error_threshold: 0.9
+
+    z_hit: 0.75
+    z_short: 0.03
+    z_max: 0.02
+    z_rand: 0.20
+    sigma_hit: 0.15
+    lambda_short: 0.1
+    recovery_alpha_fast: 0.1
+    recovery_alpha_slow: 0.001
+    save_pose_rate: 0.5

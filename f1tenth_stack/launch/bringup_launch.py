@@ -50,6 +50,11 @@ def generate_launch_description():
         'config',
         'mux.yaml'
     )
+    usb_imu_config = os.path.join(
+        get_package_share_directory('f1tenth_stack'),
+        'config',
+        'usb_imu.yaml'
+    )
 
     joy_la = DeclareLaunchArgument(
         'joy_config',
@@ -67,12 +72,22 @@ def generate_launch_description():
         'mux_config',
         default_value=mux_config,
         description='Descriptions for ackermann mux configs')
+    usb_imu_la = DeclareLaunchArgument(
+        'imu_serial_config',
+        default_value=usb_imu_config,
+        description='Configurations for USB serial IMU node')
+    launch_usb_imu_la = DeclareLaunchArgument(
+        'launch_usb_imu',
+        default_value='false',
+        description='Launch USB serial IMU publisher node')
     vesc_to_odom_la = DeclareLaunchArgument(
         'launch_vesc_to_odom',
         default_value='true',
         description='Launch vesc_to_odom node and its odom->base_link TF')
 
-    ld = LaunchDescription([joy_la, vesc_la, sensors_la, mux_la, vesc_to_odom_la])
+    ld = LaunchDescription(
+        [joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, launch_usb_imu_la, vesc_to_odom_la]
+    )
 
     joy_node = Node(
         package='joy',
@@ -124,6 +139,13 @@ def generate_launch_description():
         name='static_baselink_to_laser',
         arguments=['0.27', '0.0', '0.11', '0.0', '0.0', '0.0', 'base_link', 'laser']
     )
+    usb_imu_node = Node(
+        package='f1tenth_stack',
+        executable='usb_imu_serial_node',
+        name='usb_imu_serial_node',
+        parameters=[LaunchConfiguration('imu_serial_config')],
+        condition=IfCondition(LaunchConfiguration('launch_usb_imu'))
+    )
 
     # finalize
     ld.add_action(joy_node)
@@ -134,5 +156,6 @@ def generate_launch_description():
     ld.add_action(urg_node)
     ld.add_action(ackermann_mux_node)
     ld.add_action(static_tf_node)
+    ld.add_action(usb_imu_node)
 
     return ld
