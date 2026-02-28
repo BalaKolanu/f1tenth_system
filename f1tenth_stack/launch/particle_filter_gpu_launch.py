@@ -47,6 +47,11 @@ def generate_launch_description():
         'config',
         'vesc_imu_fusion.yaml',
     )
+    default_mux_config = os.path.join(
+        f1tenth_share,
+        'config',
+        'mux.yaml',
+    )
 
     localize_config_la = DeclareLaunchArgument(
         'localize_config',
@@ -62,6 +67,11 @@ def generate_launch_description():
         'vesc_driver_log_level',
         default_value='warn',
         description='Log level for vesc_driver_node (debug, info, warn, error, fatal)',
+    )
+    mux_config_la = DeclareLaunchArgument(
+        'mux_config',
+        default_value=default_mux_config,
+        description='Ackermann mux config file path',
     )
     imu_yaw_offset_la = DeclareLaunchArgument(
         'imu_yaw_offset_rad',
@@ -90,6 +100,7 @@ def generate_launch_description():
         launch_arguments={
             'launch_vesc_to_odom': 'true',
             'vesc_config': vesc_imu_fusion_config,
+            'mux_config': LaunchConfiguration('mux_config'),
             'launch_usb_imu': 'true',
             # Keep base_link->laser static TF for a connected map/base/laser tree.
             'launch_static_tf': 'true',
@@ -148,6 +159,7 @@ def generate_launch_description():
             localize_config_la,
             map_yaml_la,
             vesc_driver_log_level_la,
+            mux_config_la,
             imu_yaw_offset_la,
             imu_yaw_alpha_la,
             imu_linear_speed_scale_la,
