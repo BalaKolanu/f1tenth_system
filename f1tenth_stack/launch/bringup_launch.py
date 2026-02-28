@@ -80,6 +80,10 @@ def generate_launch_description():
         'launch_usb_imu',
         default_value='false',
         description='Launch USB serial IMU publisher node')
+    launch_static_tf_la = DeclareLaunchArgument(
+        'launch_static_tf',
+        default_value='true',
+        description='Launch static transform publisher for base_link->laser')
     vesc_to_odom_la = DeclareLaunchArgument(
         'launch_vesc_to_odom',
         default_value='true',
@@ -92,7 +96,7 @@ def generate_launch_description():
     ld = LaunchDescription(
         [
             joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, launch_usb_imu_la,
-            vesc_to_odom_la, vesc_driver_log_level_la
+            launch_static_tf_la, vesc_to_odom_la, vesc_driver_log_level_la
         ]
     )
 
@@ -149,7 +153,8 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_baselink_to_laser',
-        arguments=['0.27', '0.0', '0.11', '0.0', '0.0', '0.0', 'base_link', 'laser']
+        arguments=['0.27', '0.0', '0.11', '0.0', '0.0', '0.0', 'base_link', 'laser'],
+        condition=IfCondition(LaunchConfiguration('launch_static_tf'))
     )
     usb_imu_node = Node(
         package='f1tenth_stack',
