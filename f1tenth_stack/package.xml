@@ -23,6 +23,7 @@
   <depend>tf2_ros</depend>
   <depend>vesc</depend>
   <depend>ackermann_mux</depend>
+  <depend>particle_filter</depend>
   <depend>std_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
