@@ -28,6 +28,7 @@ setup(
             'tf_publisher = f1tenth_stack.tf_publisher:main',
             'scanmatching_tf_publisher = f1tenth_stack.scanmatching_tf_publisher:main',
             'tf_pose_reference_publisher = f1tenth_stack.tf_pose_reference_publisher:main',
+            'imu_odom_fusion_node = f1tenth_stack.imu_odom_fusion_node:main',
             'linear_odom_calibrator = f1tenth_stack.linear_odom_calibrator:main',
             'joy_gated_localization = f1tenth_stack.joy_gated_localization:main',
             'usb_imu_serial_node = f1tenth_stack.usb_imu_serial_node:main',
