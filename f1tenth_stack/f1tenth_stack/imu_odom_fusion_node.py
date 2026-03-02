@@ -33,7 +33,7 @@ from sensor_msgs.msg import Imu
 from tf2_ros import TransformBroadcaster
 
 
-def _norm_angle(angle: float) -> float:
+def _norm_angle(angle):
     while angle > math.pi:
         angle -= 2.0 * math.pi
     while angle < -math.pi:
@@ -41,13 +41,13 @@ def _norm_angle(angle: float) -> float:
     return angle
 
 
-def _yaw_from_quaternion(x: float, y: float, z: float, w: float) -> float:
+def _yaw_from_quaternion(x, y, z, w):
     siny_cosp = 2.0 * (w * z + x * y)
     cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
     return math.atan2(siny_cosp, cosy_cosp)
 
 
-def _quaternion_from_yaw(yaw: float):
+def _quaternion_from_yaw(yaw):
     half = 0.5 * yaw
     return (0.0, 0.0, math.sin(half), math.cos(half))
 
@@ -56,7 +56,7 @@ class ImuOdomFusionNode(Node):
     def __init__(self):
         super().__init__('imu_odom_fusion_node')
 
-        self.declare_parameter('imu_topic', '/sensors/imu/raw')
+        self.declare_parameter('imu_topic', '/sensors/imu')
         self.declare_parameter('wheel_odom_topic', '/odom')
         self.declare_parameter('fused_odom_topic', '/odometry/imu_fused')
         self.declare_parameter('odom_frame', 'odom')
@@ -97,7 +97,6 @@ class ImuOdomFusionNode(Node):
         self.y = 0.0
         self.prev_yaw = 0.0
         self.latest_orientation_covariance = [0.0] * 9
-        self.latest_imu_stamp = None
 
         self.odom_pub = self.create_publisher(Odometry, self.fused_odom_topic, 20)
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -111,7 +110,7 @@ class ImuOdomFusionNode(Node):
             % (self.imu_topic, self.wheel_odom_topic, self.fused_odom_topic, str(self.publish_tf))
         )
 
-    def handle_imu(self, msg: Imu):
+    def handle_imu(self, msg):
         raw_yaw = _yaw_from_quaternion(
             msg.orientation.x,
             msg.orientation.y,
@@ -132,9 +131,8 @@ class ImuOdomFusionNode(Node):
 
         self.have_imu = True
         self.latest_orientation_covariance = list(msg.orientation_covariance)
-        self.latest_imu_stamp = msg.header.stamp
 
-    def handle_wheel_odom(self, msg: Odometry):
+    def handle_wheel_odom(self, msg):
         current_sec = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
         if not self.initialized:
             self.x = float(msg.pose.pose.position.x)
@@ -182,7 +180,7 @@ class ImuOdomFusionNode(Node):
 
         self.publish_fused(msg, yaw, yaw_rate)
 
-    def publish_fused(self, wheel_odom_msg: Odometry, yaw: float, yaw_rate: float):
+    def publish_fused(self, wheel_odom_msg, yaw, yaw_rate):
         qx, qy, qz, qw = _quaternion_from_yaw(yaw)
 
         msg = Odometry()
@@ -199,7 +197,6 @@ class ImuOdomFusionNode(Node):
         msg.pose.pose.orientation.w = qw
         msg.pose.covariance = list(wheel_odom_msg.pose.covariance)
         if len(msg.pose.covariance) >= 36:
-            # yaw covariance slot in 6x6 row-major pose covariance
             yaw_cov = self.latest_orientation_covariance[8] if self.have_imu else 0.2
             if yaw_cov < 0.0:
                 yaw_cov = 0.2
