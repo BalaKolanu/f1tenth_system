@@ -92,11 +92,16 @@ def generate_launch_description():
         'vesc_driver_log_level',
         default_value='warn',
         description='Log level for vesc_driver_node (debug, info, warn, error, fatal)')
+    motor_speed_output_topic_la = DeclareLaunchArgument(
+        'motor_speed_output_topic',
+        default_value='commands/motor/speed',
+        description='Output topic used by ackermann_to_vesc for motor speed commands')
 
     ld = LaunchDescription(
         [
             joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, launch_usb_imu_la,
-            launch_static_tf_la, vesc_to_odom_la, vesc_driver_log_level_la
+            launch_static_tf_la, vesc_to_odom_la, vesc_driver_log_level_la,
+            motor_speed_output_topic_la
         ]
     )
 
@@ -116,7 +121,10 @@ def generate_launch_description():
         package='vesc_ackermann',
         executable='ackermann_to_vesc_node',
         name='ackermann_to_vesc_node',
-        parameters=[LaunchConfiguration('vesc_config')]
+        parameters=[LaunchConfiguration('vesc_config')],
+        remappings=[
+            ('commands/motor/speed', LaunchConfiguration('motor_speed_output_topic'))
+        ],
     )
     vesc_to_odom_node = Node(
         package='vesc_ackermann',
