@@ -14,7 +14,6 @@
   <depend>urg_node</depend>
   <depend>joy</depend>
   <depend>joy_teleop</depend>
-  <depend>sensor_msgs</depend>
   <depend>rclpy</depend>
   <depend>rosbridge_server</depend>
   <depend>slam_toolbox</depend>
