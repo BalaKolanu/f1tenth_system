@@ -25,23 +25,29 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.actions import IncludeLaunchDescription
 from launch.actions import LogInfo
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description():
+    f1tenth_share = get_package_share_directory('f1tenth_stack')
     vesc_imu_fusion_config = os.path.join(
-        get_package_share_directory('f1tenth_stack'),
+        f1tenth_share,
         'config',
         'vesc_imu_fusion.yaml',
+    )
+    scanmatching_slam_config = os.path.join(
+        f1tenth_share,
+        'config',
+        'slam_toolbox_scanmatching.yaml',
     )
 
     imu_topic_la = DeclareLaunchArgument(
         'imu_topic',
-        default_value='/sensors/imu',
+        default_value='/sensors/imu/raw',
         description='IMU topic used for yaw fusion',
     )
     imu_yaw_offset_la = DeclareLaunchArgument(
@@ -63,7 +69,7 @@ def generate_launch_description():
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
-                get_package_share_directory('f1tenth_stack'),
+                f1tenth_share,
                 'launch',
                 'bringup_launch.py',
             )
@@ -72,6 +78,7 @@ def generate_launch_description():
             'launch_vesc_to_odom': 'true',
             'vesc_config': vesc_imu_fusion_config,
             'motor_speed_output_topic': 'commands/motor/unclipped_speed',
+            'launch_usb_imu': 'true',
         }.items(),
     )
 
@@ -111,14 +118,25 @@ def generate_launch_description():
         ],
     )
 
-    scanmatching_slam_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory('f1tenth_stack'),
-                'launch',
-                'scanmatching_slam_launch.py',
-            )
-        )
+    scanmatching_slam_node = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_node',
+        output='screen',
+        parameters=[
+            scanmatching_slam_config,
+            {
+                'map_frame': 'map',
+                'base_frame': 'base_link',
+                'odom_frame': 'odom',
+                'transform_publish_period': 0.02,
+                'use_sim_time': False,
+            },
+        ],
+        remappings=[
+            ('pose', '/scanmatching_odom/pose'),
+        ],
+        arguments=['--ros-args', '--log-level', 'warn'],
     )
 
     print_usage_instructions = LogInfo(
@@ -138,7 +156,7 @@ def generate_launch_description():
             bringup_launch,
             speed_clipper_node,
             imu_odom_fusion_node,
-            scanmatching_slam_launch,
+            scanmatching_slam_node,
             print_usage_instructions,
         ]
     )
