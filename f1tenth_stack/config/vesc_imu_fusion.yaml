@@ -36,7 +36,7 @@ vesc_to_odom_node:
     publish_tf: false
     # Ignore steering-derived yaw; heading comes from IMU fusion.
     use_servo_cmd_to_calc_angular_velocity: false
-    wheelbase: .25
+    wheelbase: .324
 
 throttle_interpolator:
   ros__parameters:

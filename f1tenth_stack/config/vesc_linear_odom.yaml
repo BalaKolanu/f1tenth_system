@@ -34,7 +34,7 @@ vesc_to_odom_node:
     publish_tf: true
     # Linear odom only: ignore steering-derived yaw rate.
     use_servo_cmd_to_calc_angular_velocity: false
-    wheelbase: .25
+    wheelbase: .324
 
 throttle_interpolator:
   ros__parameters:
