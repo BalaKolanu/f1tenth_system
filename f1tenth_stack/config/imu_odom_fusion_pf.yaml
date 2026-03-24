@@ -5,7 +5,7 @@ imu_odom_fusion_node:
     fused_odom_topic: "/odometry/imu_fused"
     odom_frame: "odom"
     base_frame: "base_link"
-    publish_tf: true
+    publish_tf: false
     linear_speed_scale: 1.0
     use_first_imu_as_zero: true
     yaw_offset_rad: 0.0

@@ -52,6 +52,11 @@ def generate_launch_description():
         'config',
         'mux.yaml',
     )
+    imu_fusion_pf_config = os.path.join(
+        f1tenth_share,
+        'config',
+        'imu_odom_fusion_pf.yaml',
+    )
 
     localize_config_la = DeclareLaunchArgument(
         'localize_config',
@@ -109,9 +114,10 @@ def generate_launch_description():
             'launch_usb_imu': 'false',
             'launch_bno085_i2c': 'true',
             'launch_imu_fusion': 'true',
+            'imu_fusion_config': imu_fusion_pf_config,
             'imu_topic': '/sensors/imu/raw',
             'imu_fused_odom_topic': '/odometry/imu_fused',
-            'imu_fusion_publish_tf': 'true',
+            'imu_fusion_publish_tf': 'false',
             'imu_yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
             'imu_yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
             'imu_linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
