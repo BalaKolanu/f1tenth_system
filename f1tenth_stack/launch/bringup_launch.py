@@ -55,6 +55,16 @@ def generate_launch_description():
         'config',
         'usb_imu.yaml'
     )
+    bno085_i2c_config = os.path.join(
+        get_package_share_directory('f1tenth_stack'),
+        'config',
+        'bno085_i2c.yaml'
+    )
+    imu_fusion_config = os.path.join(
+        get_package_share_directory('f1tenth_stack'),
+        'config',
+        'imu_odom_fusion.yaml'
+    )
 
     joy_la = DeclareLaunchArgument(
         'joy_config',
@@ -76,10 +86,58 @@ def generate_launch_description():
         'imu_serial_config',
         default_value=usb_imu_config,
         description='Configurations for USB serial IMU node')
+    bno085_i2c_la = DeclareLaunchArgument(
+        'imu_i2c_config',
+        default_value=bno085_i2c_config,
+        description='Configurations for BNO085 I2C IMU node')
+    imu_fusion_la = DeclareLaunchArgument(
+        'imu_fusion_config',
+        default_value=imu_fusion_config,
+        description='Configurations for IMU odom fusion node')
     launch_usb_imu_la = DeclareLaunchArgument(
         'launch_usb_imu',
         default_value='false',
         description='Launch USB serial IMU publisher node')
+    launch_bno085_i2c_la = DeclareLaunchArgument(
+        'launch_bno085_i2c',
+        default_value='true',
+        description='Launch BNO085 I2C IMU publisher node')
+    launch_imu_fusion_la = DeclareLaunchArgument(
+        'launch_imu_fusion',
+        default_value='false',
+        description='Launch IMU + wheel odom fusion node')
+    imu_topic_la = DeclareLaunchArgument(
+        'imu_topic',
+        default_value='/sensors/imu/raw',
+        description='IMU topic consumed by the fusion pipeline')
+    imu_fused_odom_topic_la = DeclareLaunchArgument(
+        'imu_fused_odom_topic',
+        default_value='/odometry/imu_fused',
+        description='Fused odometry topic published by the IMU fusion node')
+    imu_wheel_odom_topic_la = DeclareLaunchArgument(
+        'imu_wheel_odom_topic',
+        default_value='/odom',
+        description='Wheel odometry topic consumed by the IMU fusion node')
+    imu_fusion_publish_tf_la = DeclareLaunchArgument(
+        'imu_fusion_publish_tf',
+        default_value='true',
+        description='Publish odom->base_link TF from the IMU fusion node')
+    imu_yaw_offset_la = DeclareLaunchArgument(
+        'imu_yaw_offset_rad',
+        default_value='0.0',
+        description='Static yaw offset added to IMU heading (radians)')
+    imu_yaw_alpha_la = DeclareLaunchArgument(
+        'imu_yaw_alpha',
+        default_value='0.3',
+        description='IMU yaw smoothing factor in [0,1], higher tracks faster')
+    imu_linear_speed_scale_la = DeclareLaunchArgument(
+        'imu_linear_speed_scale',
+        default_value='1.0',
+        description='Scale factor applied to wheel odom linear speed in fusion')
+    imu_wheel_speed_alpha_la = DeclareLaunchArgument(
+        'imu_wheel_speed_alpha',
+        default_value='0.85',
+        description='Weight assigned to wheel speed versus IMU-accelerated prediction in fusion')
     launch_static_tf_la = DeclareLaunchArgument(
         'launch_static_tf',
         default_value='true',
@@ -96,12 +154,38 @@ def generate_launch_description():
         'motor_speed_output_topic',
         default_value='commands/motor/speed',
         description='Output topic used by ackermann_to_vesc for motor speed commands')
+    launch_tf_speed_monitor_la = DeclareLaunchArgument(
+        'launch_tf_speed_monitor',
+        default_value='true',
+        description='Launch TF-based speed monitor node (publishes m/s and km/h)')
+    tf_speed_publish_hz_la = DeclareLaunchArgument(
+        'tf_speed_publish_hz',
+        default_value='30.0',
+        description='Publishing rate for TF speed monitor')
+    tf_speed_lowpass_alpha_la = DeclareLaunchArgument(
+        'tf_speed_lowpass_alpha',
+        default_value='0.35',
+        description='Low-pass alpha in [0,1] for TF speed monitor')
+    tf_speed_source_frame_la = DeclareLaunchArgument(
+        'tf_speed_source_frame',
+        default_value='map',
+        description='Source frame for TF speed monitor')
+    tf_speed_target_frame_la = DeclareLaunchArgument(
+        'tf_speed_target_frame',
+        default_value='base_link',
+        description='Target frame for TF speed monitor')
 
     ld = LaunchDescription(
         [
-            joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, launch_usb_imu_la,
+            joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, bno085_i2c_la,
+            imu_fusion_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
+            imu_topic_la, imu_fused_odom_topic_la, imu_wheel_odom_topic_la,
+            imu_fusion_publish_tf_la, imu_yaw_offset_la, imu_yaw_alpha_la,
+            imu_linear_speed_scale_la, imu_wheel_speed_alpha_la,
             launch_static_tf_la, vesc_to_odom_la, vesc_driver_log_level_la,
-            motor_speed_output_topic_la
+            motor_speed_output_topic_la, launch_tf_speed_monitor_la,
+            tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
+            tf_speed_source_frame_la, tf_speed_target_frame_la
         ]
     )
 
@@ -171,6 +255,53 @@ def generate_launch_description():
         parameters=[LaunchConfiguration('imu_serial_config')],
         condition=IfCondition(LaunchConfiguration('launch_usb_imu'))
     )
+    bno085_i2c_node = Node(
+        package='f1tenth_stack',
+        executable='bno085_i2c_node',
+        name='bno085_i2c_node',
+        parameters=[LaunchConfiguration('imu_i2c_config')],
+        condition=IfCondition(LaunchConfiguration('launch_bno085_i2c'))
+    )
+    imu_odom_fusion_node = Node(
+        package='f1tenth_stack',
+        executable='imu_odom_fusion_node',
+        name='imu_odom_fusion_node',
+        output='screen',
+        parameters=[
+            LaunchConfiguration('imu_fusion_config'),
+            {
+                'imu_topic': LaunchConfiguration('imu_topic'),
+                'wheel_odom_topic': LaunchConfiguration('imu_wheel_odom_topic'),
+                'fused_odom_topic': LaunchConfiguration('imu_fused_odom_topic'),
+                'publish_tf': LaunchConfiguration('imu_fusion_publish_tf'),
+                'linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
+                'yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
+                'yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
+                'wheel_speed_alpha': LaunchConfiguration('imu_wheel_speed_alpha'),
+            },
+        ],
+        condition=IfCondition(LaunchConfiguration('launch_imu_fusion'))
+    )
+    tf_speed_monitor_node = Node(
+        package='f1tenth_stack',
+        executable='tf_speed_monitor',
+        name='tf_speed_monitor',
+        output='screen',
+        parameters=[
+            {
+                'source_frame': LaunchConfiguration('tf_speed_source_frame'),
+                'target_frame': LaunchConfiguration('tf_speed_target_frame'),
+                'speed_mps_topic': '/analysis/tf_speed_mps',
+                'speed_kmph_topic': '/analysis/tf_speed_kmph',
+                'publish_hz': LaunchConfiguration('tf_speed_publish_hz'),
+                'lowpass_alpha': LaunchConfiguration('tf_speed_lowpass_alpha'),
+                'lookup_timeout_sec': 0.05,
+                'max_dt_sec': 0.25,
+                'max_position_jump_m': 0.75,
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration('launch_tf_speed_monitor'))
+    )
 
     # finalize
     ld.add_action(joy_node)
@@ -182,5 +313,8 @@ def generate_launch_description():
     ld.add_action(ackermann_mux_node)
     ld.add_action(static_tf_node)
     ld.add_action(usb_imu_node)
+    ld.add_action(bno085_i2c_node)
+    ld.add_action(imu_odom_fusion_node)
+    ld.add_action(tf_speed_monitor_node)
 
     return ld

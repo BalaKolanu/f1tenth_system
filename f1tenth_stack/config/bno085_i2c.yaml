@@ -1,0 +1,16 @@
+bno085_i2c_node:
+  ros__parameters:
+    bus_num: 7
+    address: 74
+    imu_topic: "/sensors/imu/raw"
+    mag_topic: "/sensors/mag"
+    frame_id: "imu_frame"
+    publish_rate_hz: 100.0
+    report_interval_us: 10000
+    reconnect_period_sec: 1.0
+    orientation_mode: "rotation"
+    publish_magnetic_field: false
+    orientation_covariance: 0.02
+    linear_acceleration_covariance: 0.5
+    angular_velocity_covariance: 0.02
+    magnetic_field_covariance: 0.05

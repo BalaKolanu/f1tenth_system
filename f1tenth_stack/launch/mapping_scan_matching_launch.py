@@ -65,6 +65,11 @@ def generate_launch_description():
         default_value='1.0',
         description='Scale factor applied to wheel odom linear speed in fusion',
     )
+    imu_wheel_speed_alpha_la = DeclareLaunchArgument(
+        'imu_wheel_speed_alpha',
+        default_value='0.85',
+        description='Weight assigned to wheel speed versus IMU-accelerated prediction in fusion',
+    )
 
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -78,7 +83,16 @@ def generate_launch_description():
             'launch_vesc_to_odom': 'true',
             'vesc_config': vesc_imu_fusion_config,
             'motor_speed_output_topic': 'commands/motor/unclipped_speed',
-            'launch_usb_imu': 'true',
+            'launch_usb_imu': 'false',
+            'launch_bno085_i2c': 'true',
+            'launch_imu_fusion': 'true',
+            'imu_topic': LaunchConfiguration('imu_topic'),
+            'imu_fused_odom_topic': '/odometry/imu_fused',
+            'imu_fusion_publish_tf': 'true',
+            'imu_yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
+            'imu_yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
+            'imu_linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
+            'imu_wheel_speed_alpha': LaunchConfiguration('imu_wheel_speed_alpha'),
         }.items(),
     )
 
@@ -92,28 +106,6 @@ def generate_launch_description():
                 'output_topic': 'commands/motor/speed',
                 'min_value': -2500.0,
                 'max_value': 2500.0,
-            }
-        ],
-    )
-
-    imu_odom_fusion_node = Node(
-        package='f1tenth_stack',
-        executable='imu_odom_fusion_node',
-        name='imu_odom_fusion_node',
-        output='screen',
-        parameters=[
-            {
-                'imu_topic': LaunchConfiguration('imu_topic'),
-                'wheel_odom_topic': '/odom',
-                'fused_odom_topic': '/odometry/imu_fused',
-                'odom_frame': 'odom',
-                'base_frame': 'base_link',
-                'publish_tf': True,
-                'linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
-                'use_first_imu_as_zero': True,
-                'yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
-                'yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
-                'max_dt_sec': 0.2,
             }
         ],
     )
@@ -153,9 +145,9 @@ def generate_launch_description():
             imu_yaw_offset_la,
             imu_yaw_alpha_la,
             imu_linear_speed_scale_la,
+            imu_wheel_speed_alpha_la,
             bringup_launch,
             speed_clipper_node,
-            imu_odom_fusion_node,
             scanmatching_slam_node,
             print_usage_instructions,
         ]
