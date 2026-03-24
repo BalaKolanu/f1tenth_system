@@ -144,7 +144,7 @@ class ImuOdomFusionNode(Node):
         self.declare_parameter('yaw_offset_rad', 0.0)
         self.declare_parameter('yaw_alpha', 1.0)
         self.declare_parameter('max_dt_sec', 0.2)
-        self.declare_parameter('use_accel_fusion', True)
+        self.declare_parameter('use_accel_fusion', False)
         self.declare_parameter('wheel_speed_alpha', 0.85)
         self.declare_parameter('accel_lowpass_alpha', 0.25)
         self.declare_parameter('zero_velocity_speed_threshold', 0.05)
