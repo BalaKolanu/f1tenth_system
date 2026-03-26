@@ -94,6 +94,10 @@ def generate_launch_description():
         'imu_fusion_config',
         default_value=imu_fusion_config,
         description='Configurations for IMU odom fusion node')
+    imu_frame_id_la = DeclareLaunchArgument(
+        'imu_frame_id',
+        default_value='imu_frame',
+        description='Frame id used by the IMU publishers and static TF')
     launch_usb_imu_la = DeclareLaunchArgument(
         'launch_usb_imu',
         default_value='false',
@@ -141,7 +145,31 @@ def generate_launch_description():
     launch_static_tf_la = DeclareLaunchArgument(
         'launch_static_tf',
         default_value='true',
-        description='Launch static transform publisher for base_link->laser')
+        description='Launch static transform publishers for base_link sensor frames')
+    imu_static_x_la = DeclareLaunchArgument(
+        'imu_static_x',
+        default_value='-0.27',
+        description='Static base_link->imu_frame translation x (meters)')
+    imu_static_y_la = DeclareLaunchArgument(
+        'imu_static_y',
+        default_value='0.0',
+        description='Static base_link->imu_frame translation y (meters)')
+    imu_static_z_la = DeclareLaunchArgument(
+        'imu_static_z',
+        default_value='0.11',
+        description='Static base_link->imu_frame translation z (meters)')
+    imu_static_yaw_la = DeclareLaunchArgument(
+        'imu_static_yaw',
+        default_value='-1.57079632679',
+        description='Static base_link->imu_frame yaw (radians)')
+    imu_static_pitch_la = DeclareLaunchArgument(
+        'imu_static_pitch',
+        default_value='0.0',
+        description='Static base_link->imu_frame pitch (radians)')
+    imu_static_roll_la = DeclareLaunchArgument(
+        'imu_static_roll',
+        default_value='0.0',
+        description='Static base_link->imu_frame roll (radians)')
     vesc_to_odom_la = DeclareLaunchArgument(
         'launch_vesc_to_odom',
         default_value='true',
@@ -178,11 +206,13 @@ def generate_launch_description():
     ld = LaunchDescription(
         [
             joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, bno085_i2c_la,
-            imu_fusion_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
+            imu_fusion_la, imu_frame_id_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
             imu_topic_la, imu_fused_odom_topic_la, imu_wheel_odom_topic_la,
             imu_fusion_publish_tf_la, imu_yaw_offset_la, imu_yaw_alpha_la,
             imu_linear_speed_scale_la, imu_wheel_speed_alpha_la,
-            launch_static_tf_la, vesc_to_odom_la, vesc_driver_log_level_la,
+            launch_static_tf_la, imu_static_x_la, imu_static_y_la, imu_static_z_la,
+            imu_static_yaw_la, imu_static_pitch_la, imu_static_roll_la,
+            vesc_to_odom_la, vesc_driver_log_level_la,
             motor_speed_output_topic_la, launch_tf_speed_monitor_la,
             tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
             tf_speed_source_frame_la, tf_speed_target_frame_la
@@ -248,18 +278,40 @@ def generate_launch_description():
         arguments=['0.27', '0.0', '0.11', '0.0', '0.0', '0.0', 'base_link', 'laser'],
         condition=IfCondition(LaunchConfiguration('launch_static_tf'))
     )
+    static_imu_tf_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_baselink_to_imu',
+        arguments=[
+            LaunchConfiguration('imu_static_x'),
+            LaunchConfiguration('imu_static_y'),
+            LaunchConfiguration('imu_static_z'),
+            LaunchConfiguration('imu_static_yaw'),
+            LaunchConfiguration('imu_static_pitch'),
+            LaunchConfiguration('imu_static_roll'),
+            'base_link',
+            LaunchConfiguration('imu_frame_id'),
+        ],
+        condition=IfCondition(LaunchConfiguration('launch_static_tf'))
+    )
     usb_imu_node = Node(
         package='f1tenth_stack',
         executable='usb_imu_serial_node',
         name='usb_imu_serial_node',
-        parameters=[LaunchConfiguration('imu_serial_config')],
+        parameters=[
+            LaunchConfiguration('imu_serial_config'),
+            {'frame_id': LaunchConfiguration('imu_frame_id')},
+        ],
         condition=IfCondition(LaunchConfiguration('launch_usb_imu'))
     )
     bno085_i2c_node = Node(
         package='f1tenth_stack',
         executable='bno085_i2c_node',
         name='bno085_i2c_node',
-        parameters=[LaunchConfiguration('imu_i2c_config')],
+        parameters=[
+            LaunchConfiguration('imu_i2c_config'),
+            {'frame_id': LaunchConfiguration('imu_frame_id')},
+        ],
         condition=IfCondition(LaunchConfiguration('launch_bno085_i2c'))
     )
     imu_odom_fusion_node = Node(
@@ -273,6 +325,7 @@ def generate_launch_description():
                 'imu_topic': LaunchConfiguration('imu_topic'),
                 'wheel_odom_topic': LaunchConfiguration('imu_wheel_odom_topic'),
                 'fused_odom_topic': LaunchConfiguration('imu_fused_odom_topic'),
+                'imu_frame_id': LaunchConfiguration('imu_frame_id'),
                 'publish_tf': LaunchConfiguration('imu_fusion_publish_tf'),
                 'linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
                 'yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
@@ -312,6 +365,7 @@ def generate_launch_description():
     ld.add_action(urg_node)
     ld.add_action(ackermann_mux_node)
     ld.add_action(static_tf_node)
+    ld.add_action(static_imu_tf_node)
     ld.add_action(usb_imu_node)
     ld.add_action(bno085_i2c_node)
     ld.add_action(imu_odom_fusion_node)
