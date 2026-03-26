@@ -22,6 +22,7 @@
 
 import math
 
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
 import rclpy
@@ -36,6 +37,7 @@ class LinearOdomCalibrator(Node):
 
         self.declare_parameter('odom_topic', '/odom')
         self.declare_parameter('reference_topic', '/scanmatching_odom/pose')
+        self.declare_parameter('reference_topic_type', 'pose_with_covariance_stamped')
         self.declare_parameter('sampling_frequency', 20.0)
         self.declare_parameter('max_yaw_rate', 0.10)
         self.declare_parameter('max_pair_jump', 0.25)
@@ -43,9 +45,11 @@ class LinearOdomCalibrator(Node):
         self.declare_parameter('min_reference_distance', 2.0)
         self.declare_parameter('vesc_config_path', '')
         self.declare_parameter('speed_to_erpm_gain', 0.0)
+        self.declare_parameter('current_linear_speed_scale', 1.0)
 
         odom_topic = self.get_parameter('odom_topic').value
         reference_topic = self.get_parameter('reference_topic').value
+        reference_topic_type = str(self.get_parameter('reference_topic_type').value).strip().lower()
         sample_hz = float(self.get_parameter('sampling_frequency').value)
         if sample_hz <= 0.0:
             sample_hz = 20.0
@@ -55,6 +59,9 @@ class LinearOdomCalibrator(Node):
         self.min_pair_step = float(self.get_parameter('min_pair_step').value)
         self.min_reference_distance = float(
             self.get_parameter('min_reference_distance').value
+        )
+        self.current_linear_speed_scale = float(
+            self.get_parameter('current_linear_speed_scale').value
         )
 
         self.latest_odom_xy = None
@@ -72,12 +79,33 @@ class LinearOdomCalibrator(Node):
         self.speed_to_erpm_gain = self._load_speed_to_erpm_gain()
 
         self.create_subscription(Odometry, odom_topic, self.handle_odom, 30)
-        self.create_subscription(
-            PoseWithCovarianceStamped,
-            reference_topic,
-            self.handle_reference,
-            30,
-        )
+        if reference_topic_type == 'pose_with_covariance_stamped':
+            self.create_subscription(
+                PoseWithCovarianceStamped,
+                reference_topic,
+                self.handle_reference_pose_with_covariance,
+                30,
+            )
+        elif reference_topic_type == 'pose_stamped':
+            self.create_subscription(
+                PoseStamped,
+                reference_topic,
+                self.handle_reference_pose_stamped,
+                30,
+            )
+        elif reference_topic_type == 'odometry':
+            self.create_subscription(
+                Odometry,
+                reference_topic,
+                self.handle_reference_odom,
+                30,
+            )
+        else:
+            raise ValueError(
+                "Unsupported reference_topic_type '%s'. Use one of: "
+                "pose_with_covariance_stamped, pose_stamped, odometry"
+                % reference_topic_type
+            )
         self.timer = self.create_timer(1.0 / sample_hz, self.handle_timer)
 
         rclpy.get_default_context().on_shutdown(self.print_results)
@@ -113,7 +141,13 @@ class LinearOdomCalibrator(Node):
         self.latest_odom_xy = (msg.pose.pose.position.x, msg.pose.pose.position.y)
         self.latest_odom_yaw_rate = msg.twist.twist.angular.z
 
-    def handle_reference(self, msg):
+    def handle_reference_pose_with_covariance(self, msg):
+        self.latest_reference_xy = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def handle_reference_pose_stamped(self, msg):
+        self.latest_reference_xy = (msg.pose.position.x, msg.pose.position.y)
+
+    def handle_reference_odom(self, msg):
         self.latest_reference_xy = (msg.pose.pose.position.x, msg.pose.pose.position.y)
 
     def handle_timer(self):
@@ -175,6 +209,10 @@ class LinearOdomCalibrator(Node):
 
         linear_scale = self.total_reference_distance / self.total_odom_distance
         self.get_logger().info('linear_scale_ref_over_odom: %.6f' % linear_scale)
+        self.get_logger().info(
+            'recommended_linear_speed_scale: %.6f'
+            % (self.current_linear_speed_scale * linear_scale)
+        )
 
         if self.total_reference_distance < self.min_reference_distance:
             self.get_logger().warning(
