@@ -8,8 +8,10 @@ bno085_i2c_node:
     publish_rate_hz: 100.0
     report_interval_us: 10000
     reconnect_period_sec: 1.0
-    orientation_mode: "rotation"
-    publish_magnetic_field: false
+    # Use magnetometer-backed fusion to keep yaw anchored instead of allowing
+    # gyro-only heading drift to accumulate.
+    orientation_mode: "geomagnetic"
+    publish_magnetic_field: true
     orientation_covariance: 0.02
     linear_acceleration_covariance: 0.5
     angular_velocity_covariance: 0.02

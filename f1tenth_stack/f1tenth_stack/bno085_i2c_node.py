@@ -106,7 +106,7 @@ class Bno085I2cNode(Node):
         self.declare_parameter('publish_rate_hz', 100.0)
         self.declare_parameter('report_interval_us', 10000)
         self.declare_parameter('reconnect_period_sec', 1.0)
-        self.declare_parameter('orientation_mode', 'rotation')
+        self.declare_parameter('orientation_mode', 'geomagnetic')
         self.declare_parameter('publish_magnetic_field', False)
         self.declare_parameter('orientation_covariance', 0.02)
         self.declare_parameter('linear_acceleration_covariance', 0.5)
@@ -126,9 +126,9 @@ class Bno085I2cNode(Node):
         orientation_mode = str(self.get_parameter('orientation_mode').value).strip().lower()
         if orientation_mode not in self._ORIENTATION_MODES:
             self.get_logger().warning(
-                'Unknown orientation_mode "%s", falling back to "rotation"' % orientation_mode
+                'Unknown orientation_mode "%s", falling back to "geomagnetic"' % orientation_mode
             )
-            orientation_mode = 'rotation'
+            orientation_mode = 'geomagnetic'
         self.orientation_mode = orientation_mode
         self.orientation_report_id, self._orientation_attr = self._ORIENTATION_MODES[orientation_mode]
 
