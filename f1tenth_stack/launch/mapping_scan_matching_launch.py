@@ -39,6 +39,11 @@ def generate_launch_description():
         'config',
         'vesc_imu_fusion.yaml',
     )
+    imu_orientation_only_config = os.path.join(
+        f1tenth_share,
+        'config',
+        'imu_odom_orientation_only.yaml',
+    )
     scanmatching_slam_config = os.path.join(
         f1tenth_share,
         'config',
@@ -63,12 +68,12 @@ def generate_launch_description():
     imu_linear_speed_scale_la = DeclareLaunchArgument(
         'imu_linear_speed_scale',
         default_value='1.0',
-        description='Scale factor applied to wheel odom linear speed in fusion',
+        description='Scale factor applied to wheel odom linear speed in orientation + odom fusion',
     )
-    imu_wheel_speed_alpha_la = DeclareLaunchArgument(
-        'imu_wheel_speed_alpha',
-        default_value='0.85',
-        description='Weight assigned to wheel speed versus IMU-accelerated prediction in fusion',
+    scanmatched_imu_odom_topic_la = DeclareLaunchArgument(
+        'scanmatched_imu_odom_topic',
+        default_value='/odometry/scanmatched_imu',
+        description='Output topic for scan-matched translation with IMU orientation',
     )
 
     bringup_launch = IncludeLaunchDescription(
@@ -82,6 +87,7 @@ def generate_launch_description():
         launch_arguments={
             'launch_vesc_to_odom': 'true',
             'vesc_config': vesc_imu_fusion_config,
+            'imu_fusion_config': imu_orientation_only_config,
             'motor_speed_output_topic': 'commands/motor/unclipped_speed',
             'launch_usb_imu': 'false',
             'launch_bno085_i2c': 'true',
@@ -92,7 +98,6 @@ def generate_launch_description():
             'imu_yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
             'imu_yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
             'imu_linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
-            'imu_wheel_speed_alpha': LaunchConfiguration('imu_wheel_speed_alpha'),
         }.items(),
     )
 
@@ -131,12 +136,54 @@ def generate_launch_description():
         arguments=['--ros-args', '--log-level', 'warn'],
     )
 
+    scanmatching_reference_pose_node = Node(
+        package='f1tenth_stack',
+        executable='tf_pose_reference_publisher',
+        name='scanmatching_reference_pose_publisher',
+        output='screen',
+        parameters=[
+            {
+                'source_frame': 'map',
+                'target_frame': 'base_link',
+                'output_topic': '/scanmatching_tf/pose',
+                'publish_frequency': 20.0,
+            },
+        ],
+    )
+
+    scanmatching_imu_odom_node = Node(
+        package='f1tenth_stack',
+        executable='scanmatching_imu_odom_node',
+        name='scanmatching_imu_odom_node',
+        output='screen',
+        parameters=[
+            {
+                'pose_topic': '/scanmatching_tf/pose',
+                'imu_topic': LaunchConfiguration('imu_topic'),
+                'output_topic': LaunchConfiguration('scanmatched_imu_odom_topic'),
+                'output_frame': 'map',
+                'base_frame': 'base_link',
+                'imu_frame_id': 'imu_frame',
+                'publish_tf': False,
+                'yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
+                'yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
+                'use_imu_angular_velocity': True,
+            }
+        ],
+    )
+
     print_usage_instructions = LogInfo(
-        msg='Scan-matching mapping mode with IMU-fused odom orientation enabled.\n'
+        msg=[
+            'Scan-matching mapping mode with wheel odom + IMU orientation fusion enabled '
+            '(accelerometer fusion disabled).\n'
+            'Final mapping odom topic: ',
+            LaunchConfiguration('scanmatched_imu_odom_topic'),
+            ' (scan-matched translation + IMU orientation).\n'
             'To save the resultant map, keep this session running, open a new '
             'terminal and run:\n'
             '\tros2 run nav2_map_server map_saver_cli -f your_map_file_name '
-            '--ros-args -p map_subscribe_transient_local:=true\n'
+            '--ros-args -p map_subscribe_transient_local:=true\n',
+        ]
     )
 
     return LaunchDescription(
@@ -145,10 +192,12 @@ def generate_launch_description():
             imu_yaw_offset_la,
             imu_yaw_alpha_la,
             imu_linear_speed_scale_la,
-            imu_wheel_speed_alpha_la,
+            scanmatched_imu_odom_topic_la,
             bringup_launch,
             speed_clipper_node,
             scanmatching_slam_node,
+            scanmatching_reference_pose_node,
+            scanmatching_imu_odom_node,
             print_usage_instructions,
         ]
     )
