@@ -26,6 +26,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import LogInfo
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription
@@ -76,6 +77,27 @@ def generate_launch_description():
         description='Output topic for scan-matched translation with IMU orientation',
     )
 
+    launch_bringup_la = DeclareLaunchArgument(
+        'launch_bringup',
+        default_value='true',
+        description='Launch bringup_launch.py as part of this mapping pipeline',
+    )
+    launch_speed_clipper_la = DeclareLaunchArgument(
+        'launch_speed_clipper',
+        default_value='true',
+        description='Launch speed_clipper node as part of this mapping pipeline',
+    )
+    speed_clip_min_la = DeclareLaunchArgument(
+        'speed_clip_min_erpm',
+        default_value='-2500.0',
+        description='Minimum ERPM passed through speed_clipper',
+    )
+    speed_clip_max_la = DeclareLaunchArgument(
+        'speed_clip_max_erpm',
+        default_value='2500.0',
+        description='Maximum ERPM passed through speed_clipper',
+    )
+
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -99,6 +121,7 @@ def generate_launch_description():
             'imu_yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
             'imu_linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
         }.items(),
+        condition=IfCondition(LaunchConfiguration('launch_bringup')),
     )
 
     speed_clipper_node = Node(
@@ -109,10 +132,11 @@ def generate_launch_description():
             {
                 'input_topic': 'commands/motor/unclipped_speed',
                 'output_topic': 'commands/motor/speed',
-                'min_value': -2500.0,
-                'max_value': 2500.0,
+                'min_value': LaunchConfiguration('speed_clip_min_erpm'),
+                'max_value': LaunchConfiguration('speed_clip_max_erpm'),
             }
         ],
+        condition=IfCondition(LaunchConfiguration('launch_speed_clipper')),
     )
 
     scanmatching_slam_node = Node(
@@ -193,6 +217,10 @@ def generate_launch_description():
             imu_yaw_alpha_la,
             imu_linear_speed_scale_la,
             scanmatched_imu_odom_topic_la,
+            launch_bringup_la,
+            launch_speed_clipper_la,
+            speed_clip_min_la,
+            speed_clip_max_la,
             bringup_launch,
             speed_clipper_node,
             scanmatching_slam_node,
