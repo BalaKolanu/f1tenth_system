@@ -22,6 +22,9 @@
     position_max: 0.0
     servo_min: 0.15
     servo_max: 0.85
+    # Keep the onboard VESC IMU disabled in standard bringup so the external
+    # BNO085 remains the sole source for /sensors/imu/raw.
+    publish_imu: false
 
 vesc_to_odom_node:
   ros__parameters:
