@@ -178,6 +178,10 @@ def generate_launch_description():
         'vesc_driver_log_level',
         default_value='warn',
         description='Log level for vesc_driver_node (debug, info, warn, error, fatal)')
+    vesc_publish_imu_la = DeclareLaunchArgument(
+        'vesc_publish_imu',
+        default_value='false',
+        description='Publish onboard VESC IMU data on diagnostic-only VESC-specific topics')
     motor_speed_output_topic_la = DeclareLaunchArgument(
         'motor_speed_output_topic',
         default_value='commands/motor/speed',
@@ -212,7 +216,7 @@ def generate_launch_description():
             imu_linear_speed_scale_la, imu_wheel_speed_alpha_la,
             launch_static_tf_la, imu_static_x_la, imu_static_y_la, imu_static_z_la,
             imu_static_yaw_la, imu_static_pitch_la, imu_static_roll_la,
-            vesc_to_odom_la, vesc_driver_log_level_la,
+            vesc_to_odom_la, vesc_driver_log_level_la, vesc_publish_imu_la,
             motor_speed_output_topic_la, launch_tf_speed_monitor_la,
             tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
             tf_speed_source_frame_la, tf_speed_target_frame_la
@@ -251,7 +255,10 @@ def generate_launch_description():
         package='vesc_driver',
         executable='vesc_driver_node',
         name='vesc_driver_node',
-        parameters=[LaunchConfiguration('vesc_config')],
+        parameters=[
+            LaunchConfiguration('vesc_config'),
+            {'publish_imu': LaunchConfiguration('vesc_publish_imu')},
+        ],
         arguments=[
             '--ros-args',
             '--log-level',
