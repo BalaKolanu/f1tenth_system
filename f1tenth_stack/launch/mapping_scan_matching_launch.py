@@ -89,12 +89,12 @@ def generate_launch_description():
     )
     speed_clip_min_la = DeclareLaunchArgument(
         'speed_clip_min_erpm',
-        default_value='-2500.0',
+        default_value='-4000.0',
         description='Minimum ERPM passed through speed_clipper',
     )
     speed_clip_max_la = DeclareLaunchArgument(
         'speed_clip_max_erpm',
-        default_value='2500.0',
+        default_value='4000.0',
         description='Maximum ERPM passed through speed_clipper',
     )
 

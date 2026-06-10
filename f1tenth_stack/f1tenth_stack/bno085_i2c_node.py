@@ -23,6 +23,7 @@
 # SOFTWARE.
 
 import math
+import os
 import time
 from typing import List, Optional, Tuple
 
@@ -32,6 +33,26 @@ from rclpy.qos import QoSPresetProfiles
 from sensor_msgs.msg import Imu, MagneticField
 
 _IMPORT_ERROR = None
+
+
+def _ensure_supported_jetson_model():
+    if os.environ.get('JETSON_MODEL_NAME'):
+        return
+
+    for model_path in ('/proc/device-tree/model', '/sys/firmware/devicetree/base/model'):
+        try:
+            model = open(model_path, 'rb').read().decode('utf-8', 'ignore').strip('\x00')
+        except OSError:
+            continue
+
+        # Jetson.GPIO 2.1.7 does not recognize the newer Orin Nano "Super"
+        # model string yet, but the regular Orin Nano pin map is compatible.
+        if 'Jetson Orin Nano' in model:
+            os.environ['JETSON_MODEL_NAME'] = 'JETSON_ORIN_NANO'
+            return
+
+
+_ensure_supported_jetson_model()
 
 try:
     from adafruit_extended_bus import ExtendedI2C as I2C
@@ -284,8 +305,10 @@ def main(args=None):
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-    node.destroy_node()
-    rclpy.shutdown()
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
