@@ -15,6 +15,7 @@
   <depend>joy</depend>
   <depend>joy_teleop</depend>
   <depend>rclpy</depend>
+  <depend>rosapi</depend>
   <depend>rosbridge_server</depend>
   <depend>slam_toolbox</depend>
   <depend>nav2_amcl</depend>
