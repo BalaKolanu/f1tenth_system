@@ -14,7 +14,7 @@ imu_odom_fusion_node:
     max_dt_sec: 0.2
     accel_fusion_mode: "longitudinal"
     use_accel_fusion: true
-    wheel_speed_alpha: 0.98
+    wheel_speed_alpha: 0.45
     accel_lowpass_alpha: 0.25
     stationary_bias_alpha: 0.02
     estimate_imu_bias: true

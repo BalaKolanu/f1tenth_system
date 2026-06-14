@@ -107,7 +107,7 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            'launch_vesc_to_odom': 'true',
+            'launch_vesc_to_odom': 'false',
             'vesc_config': vesc_imu_fusion_config,
             'imu_fusion_config': imu_orientation_only_config,
             'motor_speed_output_topic': 'commands/motor/unclipped_speed',

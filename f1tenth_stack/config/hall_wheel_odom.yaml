@@ -1,0 +1,21 @@
+hall_wheel_odom_node:
+  ros__parameters:
+    chip: "gpiochip0"
+    line_offset: 43
+    edge: "falling"
+    bias: "as-is"
+    publish_rate_hz: 50.0
+    speed_timeout_sec: 0.5
+    velocity_window_sec: 1.2
+    speed_lowpass_alpha: 0.08
+    # Empirically tuned from ~65 counts over 4.0 m on the current Slash 4x4 setup.
+    pulses_per_revolution: 1.95247
+    wheel_diameter_m: 0.109
+    gear_ratio: 2.85
+    odom_topic: "/odom"
+    speed_topic: "/sensors/wheel_speed_mps"
+    count_topic: "/sensors/wheel_count"
+    odom_frame: "odom"
+    base_frame: "base_link"
+    publish_tf: false
+    forward_sign: 1.0

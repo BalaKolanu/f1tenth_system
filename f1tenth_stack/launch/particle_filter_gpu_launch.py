@@ -109,6 +109,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'launch_vesc_to_odom': 'true',
+            'launch_hall_odom': 'false',
             'vesc_config': vesc_imu_fusion_config,
             'mux_config': LaunchConfiguration('mux_config'),
             'launch_usb_imu': 'false',

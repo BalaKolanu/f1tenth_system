@@ -311,6 +311,7 @@ class ScanmatchingImuOdomNode(Node):
             base_quat[2],
             base_quat[3],
         )
+
         self.latest_orientation_covariance = list(msg.orientation_covariance)
         self.have_imu_orientation = True
 

@@ -65,6 +65,11 @@ def generate_launch_description():
         'config',
         'imu_odom_fusion.yaml'
     )
+    hall_wheel_odom_config = os.path.join(
+        get_package_share_directory('f1tenth_stack'),
+        'config',
+        'hall_wheel_odom.yaml'
+    )
 
     joy_la = DeclareLaunchArgument(
         'joy_config',
@@ -94,6 +99,10 @@ def generate_launch_description():
         'imu_fusion_config',
         default_value=imu_fusion_config,
         description='Configurations for IMU odom fusion node')
+    hall_odom_la = DeclareLaunchArgument(
+        'hall_odom_config',
+        default_value=hall_wheel_odom_config,
+        description='Configurations for Hall sensor wheel odom node')
     imu_frame_id_la = DeclareLaunchArgument(
         'imu_frame_id',
         default_value='imu_frame',
@@ -172,8 +181,12 @@ def generate_launch_description():
         description='Static base_link->imu_frame roll (radians)')
     vesc_to_odom_la = DeclareLaunchArgument(
         'launch_vesc_to_odom',
-        default_value='true',
+        default_value='false',
         description='Launch vesc_to_odom node and its odom->base_link TF')
+    launch_hall_odom_la = DeclareLaunchArgument(
+        'launch_hall_odom',
+        default_value='true',
+        description='Launch Hall sensor wheel odom node as the sole /odom publisher')
     vesc_driver_log_level_la = DeclareLaunchArgument(
         'vesc_driver_log_level',
         default_value='warn',
@@ -211,12 +224,13 @@ def generate_launch_description():
         [
             joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, bno085_i2c_la,
             imu_fusion_la, imu_frame_id_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
+            hall_odom_la,
             imu_topic_la, imu_fused_odom_topic_la, imu_wheel_odom_topic_la,
             imu_fusion_publish_tf_la, imu_yaw_offset_la, imu_yaw_alpha_la,
             imu_linear_speed_scale_la, imu_wheel_speed_alpha_la,
             launch_static_tf_la, imu_static_x_la, imu_static_y_la, imu_static_z_la,
             imu_static_yaw_la, imu_static_pitch_la, imu_static_roll_la,
-            vesc_to_odom_la, vesc_driver_log_level_la, vesc_publish_imu_la,
+            vesc_to_odom_la, launch_hall_odom_la, vesc_driver_log_level_la, vesc_publish_imu_la,
             motor_speed_output_topic_la, launch_tf_speed_monitor_la,
             tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
             tf_speed_source_frame_la, tf_speed_target_frame_la
@@ -250,6 +264,14 @@ def generate_launch_description():
         name='vesc_to_odom_node',
         parameters=[LaunchConfiguration('vesc_config')],
         condition=IfCondition(LaunchConfiguration('launch_vesc_to_odom'))
+    )
+    hall_wheel_odom_node = Node(
+        package='f1tenth_stack',
+        executable='hall_wheel_odom_node',
+        name='hall_wheel_odom_node',
+        output='screen',
+        parameters=[LaunchConfiguration('hall_odom_config')],
+        condition=IfCondition(LaunchConfiguration('launch_hall_odom'))
     )
     vesc_driver_node = Node(
         package='vesc_driver',
@@ -368,6 +390,7 @@ def generate_launch_description():
     ld.add_action(joy_teleop_node)
     ld.add_action(ackermann_to_vesc_node)
     ld.add_action(vesc_to_odom_node)
+    ld.add_action(hall_wheel_odom_node)
     ld.add_action(vesc_driver_node)
     ld.add_action(urg_node)
     ld.add_action(ackermann_mux_node)

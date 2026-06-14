@@ -381,7 +381,9 @@ class ImuOdomFusionNode(Node):
         else:
             self.imu_yaw = measured_yaw
 
-        self.latest_orientation_quaternion = _quaternion_from_rpy(raw_roll, raw_pitch, self.imu_yaw)
+        self.latest_orientation_quaternion = _quaternion_from_rpy(
+            raw_roll, raw_pitch, self.imu_yaw
+        )
         self.latest_orientation_covariance = list(msg.orientation_covariance)
         self.have_imu_orientation = True
 
