@@ -33,14 +33,14 @@ ackermann_to_vesc_node:
     deadman_button_index_alt: 5
     deadman_timeout_sec: 0.5
     deadman_active_brake: true
-    deadman_brake_current: 8.0
+    deadman_brake_current: 12000.0
     command_timeout_sec: 0.25
     command_timeout_brake_current: 8.0
     active_braking_enabled: true
     active_brake_min_current: 1.0
-    active_brake_max_current: 8.0
-    brake_current_per_decel: 1.0
-    brake_current_per_speed_error: 2.0
+    active_brake_max_current: 9.0
+    brake_current_per_decel: 1.2
+    brake_current_per_speed_error: 2.4
     default_decel_mps2: 1.0
     brake_enter_speed_error_mps: 0.05
     brake_release_speed_error_mps: 0.02
