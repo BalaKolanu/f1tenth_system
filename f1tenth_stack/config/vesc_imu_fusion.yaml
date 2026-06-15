@@ -27,6 +27,29 @@
     # BNO085 remains the sole source for /sensors/imu/raw.
     publish_imu: false
 
+ackermann_to_vesc_node:
+  ros__parameters:
+    joy_topic: /joy
+    deadman_button_index: 4
+    deadman_button_index_alt: 5
+    deadman_timeout_sec: 0.5
+    deadman_active_brake: true
+    deadman_brake_current: 8.0
+    command_timeout_sec: 0.25
+    command_timeout_brake_current: 8.0
+    active_braking_enabled: true
+    active_brake_min_current: 1.0
+    active_brake_max_current: 8.0
+    brake_current_per_decel: 1.0
+    brake_current_per_speed_error: 2.0
+    default_decel_mps2: 1.0
+    brake_enter_speed_error_mps: 0.05
+    brake_release_speed_error_mps: 0.02
+    brake_min_vehicle_speed_mps: 0.05
+    brake_current_slew_rate_aps: 40.0
+    vesc_state_topic: sensors/core
+    vesc_state_timeout_sec: 0.25
+
 vesc_to_odom_node:
   ros__parameters:
     # vesc_to_odom applies an internal leading minus on raw motor speed.
