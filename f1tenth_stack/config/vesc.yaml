@@ -13,7 +13,7 @@
     deadman_button_index_alt: 5
     deadman_timeout_sec: 0.5
     deadman_active_brake: true
-    deadman_brake_current: 12000.0
+    deadman_brake_current: 30.0
 
     port: /dev/sensors/vesc
     duty_cycle_min: 0.0
