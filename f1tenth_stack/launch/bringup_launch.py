@@ -207,10 +207,6 @@ def generate_launch_description():
         'launch_tf_speed_monitor',
         default_value='true',
         description='Launch TF-based speed monitor node (publishes m/s and km/h)')
-    launch_imu_accel_analysis_la = DeclareLaunchArgument(
-        'launch_imu_accel_analysis',
-        default_value='true',
-        description='Launch IMU acceleration analysis node for BNO085, VESC, and averaged outputs')
     tf_speed_publish_hz_la = DeclareLaunchArgument(
         'tf_speed_publish_hz',
         default_value='30.0',
@@ -239,7 +235,7 @@ def generate_launch_description():
             launch_static_tf_la, imu_static_x_la, imu_static_y_la, imu_static_z_la,
             imu_static_yaw_la, imu_static_pitch_la, imu_static_roll_la,
             vesc_to_odom_la, launch_hall_odom_la, vesc_driver_log_level_la, vesc_publish_imu_la,
-            motor_speed_output_topic_la, launch_tf_speed_monitor_la, launch_imu_accel_analysis_la,
+            motor_speed_output_topic_la, launch_tf_speed_monitor_la,
             tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
             tf_speed_source_frame_la, tf_speed_target_frame_la
         ]
@@ -399,22 +395,6 @@ def generate_launch_description():
         ],
         condition=IfCondition(LaunchConfiguration('launch_tf_speed_monitor'))
     )
-    imu_accel_analysis_node = Node(
-        package='f1tenth_stack',
-        executable='imu_accel_analysis_node',
-        name='imu_accel_analysis_node',
-        output='screen',
-        parameters=[
-            {
-                'bno_imu_topic': '/sensors/imu/raw',
-                'vesc_imu_topic': '/sensors/vesc/imu/raw',
-                'analysis_topic_prefix': '/analysis/imu_accel',
-                'publish_rate_hz': 50.0,
-                'stale_timeout_sec': 0.2,
-            }
-        ],
-        condition=IfCondition(LaunchConfiguration('launch_imu_accel_analysis'))
-    )
 
     # finalize
     ld.add_action(joy_node)
@@ -431,6 +411,5 @@ def generate_launch_description():
     ld.add_action(bno085_i2c_node)
     ld.add_action(imu_odom_fusion_node)
     ld.add_action(tf_speed_monitor_node)
-    ld.add_action(imu_accel_analysis_node)
 
     return ld

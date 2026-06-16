@@ -24,7 +24,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'throttle_interpolator = f1tenth_stack.throttle_interpolator:main',
             'speed_clipper = f1tenth_stack.speed_clipper:main',
             'tf_publisher = f1tenth_stack.tf_publisher:main',
             'scanmatching_tf_publisher = f1tenth_stack.scanmatching_tf_publisher:main',
@@ -35,7 +34,6 @@ setup(
             'scanmatching_imu_odom_node = f1tenth_stack.scanmatching_imu_odom_node:main',
             'linear_odom_calibrator = f1tenth_stack.linear_odom_calibrator:main',
             'joy_gated_localization = f1tenth_stack.joy_gated_localization:main',
-            'usb_imu_serial_node = f1tenth_stack.usb_imu_serial_node:main',
             'bno085_i2c_node = f1tenth_stack.bno085_i2c_node:main',
             'safe_rosbridge_websocket = f1tenth_stack.safe_rosbridge_websocket:main',
         ],
