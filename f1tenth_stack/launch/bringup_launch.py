@@ -105,8 +105,12 @@ def generate_launch_description():
         description='Configurations for Hall sensor wheel odom node')
     imu_frame_id_la = DeclareLaunchArgument(
         'imu_frame_id',
-        default_value='imu_frame',
+        default_value='bno_imu_frame',
         description='Frame id used by the IMU publishers and static TF')
+    vesc_imu_frame_id_la = DeclareLaunchArgument(
+        'vesc_imu_frame_id',
+        default_value='base_link',
+        description='Frame id used by the onboard VESC IMU publisher')
     launch_usb_imu_la = DeclareLaunchArgument(
         'launch_usb_imu',
         default_value='false',
@@ -157,7 +161,7 @@ def generate_launch_description():
         description='Launch static transform publishers for base_link sensor frames')
     imu_static_x_la = DeclareLaunchArgument(
         'imu_static_x',
-        default_value='-0.27',
+        default_value='0.27',
         description='Static base_link->imu_frame translation x (meters)')
     imu_static_y_la = DeclareLaunchArgument(
         'imu_static_y',
@@ -165,7 +169,7 @@ def generate_launch_description():
         description='Static base_link->imu_frame translation y (meters)')
     imu_static_z_la = DeclareLaunchArgument(
         'imu_static_z',
-        default_value='0.11',
+        default_value='0.16',
         description='Static base_link->imu_frame translation z (meters)')
     imu_static_yaw_la = DeclareLaunchArgument(
         'imu_static_yaw',
@@ -193,7 +197,7 @@ def generate_launch_description():
         description='Log level for vesc_driver_node (debug, info, warn, error, fatal)')
     vesc_publish_imu_la = DeclareLaunchArgument(
         'vesc_publish_imu',
-        default_value='false',
+        default_value='true',
         description='Publish onboard VESC IMU data on diagnostic-only VESC-specific topics')
     motor_speed_output_topic_la = DeclareLaunchArgument(
         'motor_speed_output_topic',
@@ -203,6 +207,10 @@ def generate_launch_description():
         'launch_tf_speed_monitor',
         default_value='true',
         description='Launch TF-based speed monitor node (publishes m/s and km/h)')
+    launch_imu_accel_analysis_la = DeclareLaunchArgument(
+        'launch_imu_accel_analysis',
+        default_value='true',
+        description='Launch IMU acceleration analysis node for BNO085, VESC, and averaged outputs')
     tf_speed_publish_hz_la = DeclareLaunchArgument(
         'tf_speed_publish_hz',
         default_value='30.0',
@@ -223,7 +231,7 @@ def generate_launch_description():
     ld = LaunchDescription(
         [
             joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, bno085_i2c_la,
-            imu_fusion_la, imu_frame_id_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
+            imu_fusion_la, imu_frame_id_la, vesc_imu_frame_id_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
             hall_odom_la,
             imu_topic_la, imu_fused_odom_topic_la, imu_wheel_odom_topic_la,
             imu_fusion_publish_tf_la, imu_yaw_offset_la, imu_yaw_alpha_la,
@@ -231,7 +239,7 @@ def generate_launch_description():
             launch_static_tf_la, imu_static_x_la, imu_static_y_la, imu_static_z_la,
             imu_static_yaw_la, imu_static_pitch_la, imu_static_roll_la,
             vesc_to_odom_la, launch_hall_odom_la, vesc_driver_log_level_la, vesc_publish_imu_la,
-            motor_speed_output_topic_la, launch_tf_speed_monitor_la,
+            motor_speed_output_topic_la, launch_tf_speed_monitor_la, launch_imu_accel_analysis_la,
             tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
             tf_speed_source_frame_la, tf_speed_target_frame_la
         ]
@@ -279,7 +287,14 @@ def generate_launch_description():
         name='vesc_driver_node',
         parameters=[
             LaunchConfiguration('vesc_config'),
-            {'publish_imu': LaunchConfiguration('vesc_publish_imu')},
+            {
+                'publish_imu': LaunchConfiguration('vesc_publish_imu'),
+                'imu_frame_id': LaunchConfiguration('vesc_imu_frame_id'),
+            },
+        ],
+        remappings=[
+            ('sensors/imu', '/sensors/vesc/imu'),
+            ('sensors/imu/raw', '/sensors/vesc/imu/raw'),
         ],
         arguments=[
             '--ros-args',
@@ -384,6 +399,22 @@ def generate_launch_description():
         ],
         condition=IfCondition(LaunchConfiguration('launch_tf_speed_monitor'))
     )
+    imu_accel_analysis_node = Node(
+        package='f1tenth_stack',
+        executable='imu_accel_analysis_node',
+        name='imu_accel_analysis_node',
+        output='screen',
+        parameters=[
+            {
+                'bno_imu_topic': '/sensors/imu/raw',
+                'vesc_imu_topic': '/sensors/vesc/imu/raw',
+                'analysis_topic_prefix': '/analysis/imu_accel',
+                'publish_rate_hz': 50.0,
+                'stale_timeout_sec': 0.2,
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration('launch_imu_accel_analysis'))
+    )
 
     # finalize
     ld.add_action(joy_node)
@@ -400,5 +431,6 @@ def generate_launch_description():
     ld.add_action(bno085_i2c_node)
     ld.add_action(imu_odom_fusion_node)
     ld.add_action(tf_speed_monitor_node)
+    ld.add_action(imu_accel_analysis_node)
 
     return ld

@@ -4,7 +4,7 @@ bno085_i2c_node:
     address: 74
     imu_topic: "/sensors/imu/raw"
     mag_topic: "/sensors/mag"
-    frame_id: "imu_frame"
+    frame_id: "bno_imu_frame"
     publish_rate_hz: 100.0
     report_interval_us: 10000
     reconnect_period_sec: 1.0
