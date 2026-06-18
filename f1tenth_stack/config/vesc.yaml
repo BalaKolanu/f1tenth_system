@@ -44,6 +44,9 @@ ackermann_to_vesc_node:
     command_timeout_sec: 0.25
     command_timeout_brake_current: 8.0
     active_braking_enabled: true
+    runtime_active_braking_default_enabled: true
+    active_braking_enable_topic: /safety/vesc_active_braking_enabled
+    active_braking_enable_timeout_sec: 0.5
     active_brake_min_current: 1.0
     active_brake_max_current: 9.0
     brake_current_per_decel: 1.2
