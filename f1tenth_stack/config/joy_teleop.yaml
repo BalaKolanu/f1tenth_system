@@ -33,8 +33,8 @@ joy_teleop:
           scale: 5.0
           offset: 0.0
         drive-steering_angle:
-          axis: 2 # 3 for logitech controller; 2 for PS5 controller
-          
+          axis: 2 # PS5 right stick horizontal
+          # axis: 3 # Logitech F-710 right stick horizontal
           scale: 0.34
           offset: 0.0
 
