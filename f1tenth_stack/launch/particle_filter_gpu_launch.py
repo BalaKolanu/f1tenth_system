@@ -98,6 +98,41 @@ def generate_launch_description():
         default_value='0.85',
         description='Weight assigned to wheel speed versus IMU-accelerated prediction in fusion',
     )
+    secondary_imu_topic_la = DeclareLaunchArgument(
+        'secondary_imu_topic',
+        default_value='',
+        description='Optional secondary IMU topic fused with the primary IMU heading',
+    )
+    secondary_imu_frame_id_la = DeclareLaunchArgument(
+        'secondary_imu_frame_id',
+        default_value='base_link',
+        description='Fallback frame id used for the secondary IMU when messages omit header.frame_id',
+    )
+    secondary_imu_weight_la = DeclareLaunchArgument(
+        'secondary_imu_weight',
+        default_value='0.35',
+        description='Relative heading weight assigned to the secondary IMU when both are healthy',
+    )
+    secondary_imu_angular_velocity_weight_la = DeclareLaunchArgument(
+        'secondary_imu_angular_velocity_weight',
+        default_value='0.5',
+        description='Relative yaw-rate weight assigned to the secondary IMU when both are healthy',
+    )
+    secondary_imu_timeout_sec_la = DeclareLaunchArgument(
+        'secondary_imu_timeout_sec',
+        default_value='0.25',
+        description='Maximum age difference allowed before a secondary IMU sample is treated as stale',
+    )
+    prefer_secondary_imu_on_yaw_disagreement_la = DeclareLaunchArgument(
+        'prefer_secondary_imu_on_yaw_disagreement',
+        default_value='false',
+        description='Prefer the secondary IMU when dual IMUs strongly disagree on yaw',
+    )
+    imu_fusion_config_la = DeclareLaunchArgument(
+        'imu_fusion_config',
+        default_value=imu_fusion_pf_config,
+        description='Path to IMU/wheel odom fusion config yaml used for PF bringup',
+    )
 
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -115,7 +150,7 @@ def generate_launch_description():
             'launch_usb_imu': 'false',
             'launch_bno085_i2c': 'true',
             'launch_imu_fusion': 'true',
-            'imu_fusion_config': imu_fusion_pf_config,
+            'imu_fusion_config': LaunchConfiguration('imu_fusion_config'),
             'imu_topic': '/sensors/imu/raw',
             'imu_fused_odom_topic': '/odometry/imu_fused',
             'imu_fusion_publish_tf': 'false',
@@ -123,6 +158,16 @@ def generate_launch_description():
             'imu_yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
             'imu_linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
             'imu_wheel_speed_alpha': LaunchConfiguration('imu_wheel_speed_alpha'),
+            'secondary_imu_topic': LaunchConfiguration('secondary_imu_topic'),
+            'secondary_imu_frame_id': LaunchConfiguration('secondary_imu_frame_id'),
+            'secondary_imu_weight': LaunchConfiguration('secondary_imu_weight'),
+            'secondary_imu_angular_velocity_weight': LaunchConfiguration(
+                'secondary_imu_angular_velocity_weight'
+            ),
+            'secondary_imu_timeout_sec': LaunchConfiguration('secondary_imu_timeout_sec'),
+            'prefer_secondary_imu_on_yaw_disagreement': LaunchConfiguration(
+                'prefer_secondary_imu_on_yaw_disagreement'
+            ),
             # Keep base_link->laser static TF for a connected map/base/laser tree.
             'launch_static_tf': 'true',
             'vesc_driver_log_level': LaunchConfiguration('vesc_driver_log_level'),
@@ -162,6 +207,13 @@ def generate_launch_description():
             imu_yaw_alpha_la,
             imu_linear_speed_scale_la,
             imu_wheel_speed_alpha_la,
+            secondary_imu_topic_la,
+            secondary_imu_frame_id_la,
+            secondary_imu_weight_la,
+            secondary_imu_angular_velocity_weight_la,
+            secondary_imu_timeout_sec_la,
+            prefer_secondary_imu_on_yaw_disagreement_la,
+            imu_fusion_config_la,
             bringup_launch,
             particle_filter_launch,
             print_usage_instructions,
