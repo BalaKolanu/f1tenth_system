@@ -24,7 +24,8 @@
 
 import math
 import time
-from typing import List, Optional, Tuple
+from functools import partial
+from typing import Dict, List, Optional, Tuple
 
 from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
@@ -152,6 +153,29 @@ def _rotate_vector(
     )
 
 
+def _stamp_to_sec(stamp) -> float:
+    return float(stamp.sec) + float(stamp.nanosec) * 1e-9
+
+
+def _weighted_angle_average(
+    weighted_angles: List[Tuple[float, float]]
+) -> Optional[float]:
+    if not weighted_angles:
+        return None
+
+    sin_sum = 0.0
+    cos_sum = 0.0
+    for angle, weight in weighted_angles:
+        if weight <= 0.0 or not math.isfinite(angle):
+            continue
+        sin_sum += weight * math.sin(angle)
+        cos_sum += weight * math.cos(angle)
+
+    if abs(sin_sum) < 1e-9 and abs(cos_sum) < 1e-9:
+        return weighted_angles[0][0]
+    return math.atan2(sin_sum, cos_sum)
+
+
 class ImuOdomFusionNode(Node):
     def __init__(self):
         super().__init__('imu_odom_fusion_node')
@@ -171,6 +195,9 @@ class ImuOdomFusionNode(Node):
         self.declare_parameter('accel_fusion_mode', 'off')
         self.declare_parameter('use_accel_fusion', False)
         self.declare_parameter('wheel_speed_alpha', 0.85)
+        self.declare_parameter('high_speed_wheel_speed_alpha', -1.0)
+        self.declare_parameter('high_speed_erpm_threshold', 0.0)
+        self.declare_parameter('speed_to_erpm_gain', 3278.071192)
         self.declare_parameter('accel_lowpass_alpha', 0.25)
         self.declare_parameter('stationary_bias_alpha', 0.02)
         self.declare_parameter('estimate_imu_bias', True)
@@ -178,6 +205,14 @@ class ImuOdomFusionNode(Node):
         self.declare_parameter('zero_velocity_speed_threshold', 0.05)
         self.declare_parameter('zero_velocity_accel_threshold', 0.25)
         self.declare_parameter('use_imu_angular_velocity', True)
+        self.declare_parameter('secondary_imu_topic', '')
+        self.declare_parameter('secondary_imu_frame_id', '')
+        self.declare_parameter('secondary_imu_weight', 0.35)
+        self.declare_parameter('secondary_imu_angular_velocity_weight', 0.5)
+        self.declare_parameter('secondary_imu_timeout_sec', 0.25)
+        self.declare_parameter('dual_imu_max_yaw_delta_rad', 0.35)
+        self.declare_parameter('dual_imu_outlier_weight', 0.1)
+        self.declare_parameter('prefer_secondary_imu_on_yaw_disagreement', False)
 
         self.imu_topic = str(self.get_parameter('imu_topic').value)
         self.wheel_odom_topic = str(self.get_parameter('wheel_odom_topic').value)
@@ -194,6 +229,13 @@ class ImuOdomFusionNode(Node):
         self.accel_fusion_mode = str(self.get_parameter('accel_fusion_mode').value).strip().lower()
         self.use_accel_fusion = _as_bool(self.get_parameter('use_accel_fusion').value)
         self.wheel_speed_alpha = float(self.get_parameter('wheel_speed_alpha').value)
+        self.high_speed_wheel_speed_alpha = float(
+            self.get_parameter('high_speed_wheel_speed_alpha').value
+        )
+        self.high_speed_erpm_threshold = float(
+            self.get_parameter('high_speed_erpm_threshold').value
+        )
+        self.speed_to_erpm_gain = float(self.get_parameter('speed_to_erpm_gain').value)
         self.accel_lowpass_alpha = float(self.get_parameter('accel_lowpass_alpha').value)
         self.stationary_bias_alpha = float(self.get_parameter('stationary_bias_alpha').value)
         self.estimate_imu_bias = _as_bool(self.get_parameter('estimate_imu_bias').value)
@@ -201,6 +243,22 @@ class ImuOdomFusionNode(Node):
         self.zero_velocity_speed_threshold = float(self.get_parameter('zero_velocity_speed_threshold').value)
         self.zero_velocity_accel_threshold = float(self.get_parameter('zero_velocity_accel_threshold').value)
         self.use_imu_angular_velocity = _as_bool(self.get_parameter('use_imu_angular_velocity').value)
+        self.secondary_imu_topic = str(self.get_parameter('secondary_imu_topic').value)
+        self.secondary_imu_frame_id = str(self.get_parameter('secondary_imu_frame_id').value)
+        self.secondary_imu_weight = float(self.get_parameter('secondary_imu_weight').value)
+        self.secondary_imu_angular_velocity_weight = float(
+            self.get_parameter('secondary_imu_angular_velocity_weight').value
+        )
+        self.secondary_imu_timeout_sec = float(self.get_parameter('secondary_imu_timeout_sec').value)
+        self.dual_imu_max_yaw_delta_rad = float(
+            self.get_parameter('dual_imu_max_yaw_delta_rad').value
+        )
+        self.dual_imu_outlier_weight = float(
+            self.get_parameter('dual_imu_outlier_weight').value
+        )
+        self.prefer_secondary_imu_on_yaw_disagreement = _as_bool(
+            self.get_parameter('prefer_secondary_imu_on_yaw_disagreement').value
+        )
 
         if self.yaw_alpha < 0.0:
             self.yaw_alpha = 0.0
@@ -219,6 +277,15 @@ class ImuOdomFusionNode(Node):
             self.accel_fusion_mode = 'off'
         self.use_accel_fusion = self.accel_fusion_mode != 'off'
         self.wheel_speed_alpha = _clamp(self.wheel_speed_alpha, 0.0, 1.0)
+        if self.high_speed_wheel_speed_alpha < 0.0:
+            self.high_speed_wheel_speed_alpha = self.wheel_speed_alpha
+        self.high_speed_wheel_speed_alpha = _clamp(
+            self.high_speed_wheel_speed_alpha, 0.0, 1.0
+        )
+        if self.high_speed_erpm_threshold < 0.0:
+            self.high_speed_erpm_threshold = 0.0
+        if self.speed_to_erpm_gain <= 0.0:
+            self.speed_to_erpm_gain = 3278.071192
         self.accel_lowpass_alpha = _clamp(self.accel_lowpass_alpha, 0.0, 1.0)
         self.stationary_bias_alpha = _clamp(self.stationary_bias_alpha, 0.0, 1.0)
         if self.max_accel_mps2 <= 0.0:
@@ -227,8 +294,16 @@ class ImuOdomFusionNode(Node):
             self.zero_velocity_speed_threshold = 0.0
         if self.zero_velocity_accel_threshold < 0.0:
             self.zero_velocity_accel_threshold = 0.0
+        self.secondary_imu_weight = _clamp(self.secondary_imu_weight, 0.0, 1.0)
+        self.secondary_imu_angular_velocity_weight = _clamp(
+            self.secondary_imu_angular_velocity_weight, 0.0, 1.0
+        )
+        if self.secondary_imu_timeout_sec <= 0.0:
+            self.secondary_imu_timeout_sec = 0.25
+        if self.dual_imu_max_yaw_delta_rad <= 0.0:
+            self.dual_imu_max_yaw_delta_rad = 0.35
+        self.dual_imu_outlier_weight = _clamp(self.dual_imu_outlier_weight, 0.0, 1.0)
 
-        self.imu_yaw_ref = None
         self.imu_yaw = 0.0
         self.have_imu_orientation = False
         self.latest_orientation_quaternion = (0.0, 0.0, 0.0, 1.0)
@@ -241,6 +316,16 @@ class ImuOdomFusionNode(Node):
         self.forward_accel_bias = 0.0
         self.gyro_z_bias = 0.0
         self._imu_to_base_quat_cache = {}
+        self.imu_states: Dict[str, Dict[str, object]] = {
+            'primary': self._make_imu_state(self.imu_frame_id, 1.0, 1.0),
+        }
+        if self.secondary_imu_topic:
+            secondary_frame = self.secondary_imu_frame_id or self.base_frame
+            self.imu_states['secondary'] = self._make_imu_state(
+                secondary_frame,
+                self.secondary_imu_weight,
+                self.secondary_imu_angular_velocity_weight,
+            )
 
         self.initialized = False
         self.last_odom_time = None
@@ -252,6 +337,7 @@ class ImuOdomFusionNode(Node):
         self.last_wheel_speed = 0.0
         self.prev_yaw = 0.0
         self._last_warn = {}
+        self._last_high_speed_blend_active = None
 
         self.odom_pub = self.create_publisher(Odometry, self.fused_odom_topic, 20)
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -259,14 +345,27 @@ class ImuOdomFusionNode(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         sensor_qos = QoSPresetProfiles.SENSOR_DATA.value
-        self.create_subscription(Imu, self.imu_topic, self.handle_imu, sensor_qos)
+        self.create_subscription(
+            Imu,
+            self.imu_topic,
+            partial(self.handle_imu, sensor_key='primary'),
+            sensor_qos,
+        )
+        if self.secondary_imu_topic:
+            self.create_subscription(
+                Imu,
+                self.secondary_imu_topic,
+                partial(self.handle_imu, sensor_key='secondary'),
+                sensor_qos,
+            )
         self.create_subscription(Odometry, self.wheel_odom_topic, self.handle_wheel_odom, 50)
 
         self.get_logger().info(
-            'IMU odom fusion active: imu=%s wheel_odom=%s fused_odom=%s '
+            'IMU odom fusion active: imu=%s secondary_imu=%s wheel_odom=%s fused_odom=%s '
             'publish_tf=%s accel_mode=%s wheel_speed_alpha=%.2f estimate_imu_bias=%s'
             % (
                 self.imu_topic,
+                self.secondary_imu_topic or '(disabled)',
                 self.wheel_odom_topic,
                 self.fused_odom_topic,
                 str(self.publish_tf),
@@ -276,11 +375,63 @@ class ImuOdomFusionNode(Node):
             )
         )
 
+    @staticmethod
+    def _make_imu_state(frame_id: str, orientation_weight: float, angular_velocity_weight: float):
+        return {
+            'frame_id': frame_id,
+            'orientation_weight': orientation_weight,
+            'angular_velocity_weight': angular_velocity_weight,
+            'yaw_bias': None,
+            'measured_yaw': 0.0,
+            'raw_roll': 0.0,
+            'raw_pitch': 0.0,
+            'latest_orientation_covariance': [0.0] * 9,
+            'have_orientation': False,
+            'latest_linear_acceleration': (0.0, 0.0, 0.0),
+            'have_linear_acceleration': False,
+            'forward_accel_bias': 0.0,
+            'latest_angular_velocity_z': 0.0,
+            'have_angular_velocity': False,
+            'latest_angular_velocity_covariance': [0.0] * 9,
+            'gyro_z_bias': 0.0,
+            'last_msg_time_sec': None,
+        }
+
     def _warn_throttled(self, key, message, period_sec=5.0):
         now = time.monotonic()
         if now - self._last_warn.get(key, 0.0) >= period_sec:
             self._last_warn[key] = now
             self.get_logger().warning(message)
+
+    def _active_wheel_speed_alpha(self, wheel_speed_mps):
+        if self.high_speed_erpm_threshold <= 0.0:
+            return self.wheel_speed_alpha
+        wheel_erpm = abs(wheel_speed_mps) * self.speed_to_erpm_gain
+        if wheel_erpm >= self.high_speed_erpm_threshold:
+            return self.high_speed_wheel_speed_alpha
+        return self.wheel_speed_alpha
+
+    def _log_speed_blend_mode(self, wheel_speed_mps):
+        if self.high_speed_erpm_threshold <= 0.0:
+            return
+        wheel_erpm = abs(wheel_speed_mps) * self.speed_to_erpm_gain
+        high_speed_active = wheel_erpm >= self.high_speed_erpm_threshold
+        if self._last_high_speed_blend_active is None:
+            self._last_high_speed_blend_active = high_speed_active
+            return
+        if high_speed_active == self._last_high_speed_blend_active:
+            return
+        self._last_high_speed_blend_active = high_speed_active
+        if high_speed_active:
+            self.get_logger().info(
+                'Speed blend switched to high-speed odom-priority mode: erpm=%.0f alpha=%.2f'
+                % (wheel_erpm, self.high_speed_wheel_speed_alpha)
+            )
+        else:
+            self.get_logger().info(
+                'Speed blend returned to base fusion mode: erpm=%.0f alpha=%.2f'
+                % (wheel_erpm, self.wheel_speed_alpha)
+            )
 
     @staticmethod
     def _covariance_available(covariance: List[float]) -> bool:
@@ -328,6 +479,151 @@ class ImuOdomFusionNode(Node):
         self._imu_to_base_quat_cache[source_frame] = quat
         return quat
 
+    def _imu_state_is_fresh(self, state: Dict[str, object], current_time_sec: float) -> bool:
+        last_msg_time_sec = state['last_msg_time_sec']
+        if last_msg_time_sec is None:
+            return False
+        if current_time_sec <= 0.0:
+            return True
+        return abs(current_time_sec - float(last_msg_time_sec)) <= self.secondary_imu_timeout_sec
+
+    def _orientation_candidates(self, current_time_sec: float):
+        candidates = []
+        for sensor_key, state in self.imu_states.items():
+            if not state['have_orientation'] or not self._imu_state_is_fresh(state, current_time_sec):
+                continue
+            candidates.append(
+                {
+                    'sensor_key': sensor_key,
+                    'yaw': float(state['measured_yaw']),
+                    'weight': float(state['orientation_weight']),
+                    'roll': float(state['raw_roll']),
+                    'pitch': float(state['raw_pitch']),
+                    'covariance': list(state['latest_orientation_covariance']),
+                }
+            )
+        return candidates
+
+    def _motion_candidates(self, current_time_sec: float):
+        angular_velocity_candidates = []
+        accel_candidates = []
+        for state in self.imu_states.values():
+            if not self._imu_state_is_fresh(state, current_time_sec):
+                continue
+            if state['have_angular_velocity']:
+                angular_velocity_candidates.append(
+                    (
+                        float(state['latest_angular_velocity_z']),
+                        float(state['angular_velocity_weight']),
+                        list(state['latest_angular_velocity_covariance']),
+                    )
+                )
+            if state['have_linear_acceleration']:
+                accel_candidates.append(
+                    (
+                        tuple(state['latest_linear_acceleration']),
+                        float(state['orientation_weight']),
+                    )
+                )
+        return angular_velocity_candidates, accel_candidates
+
+    def _apply_dual_imu_outlier_guard(self, candidates, warn_key: str, warn_message: str):
+        if len(candidates) < 2:
+            return candidates
+
+        yaw_delta = abs(_norm_angle(candidates[0]['yaw'] - candidates[1]['yaw']))
+        if yaw_delta <= self.dual_imu_max_yaw_delta_rad:
+            return candidates
+
+        if self.prefer_secondary_imu_on_yaw_disagreement:
+            preferred_index = next(
+                (
+                    idx
+                    for idx, candidate in enumerate(candidates)
+                    if candidate.get('sensor_key') == 'secondary'
+                ),
+                None,
+            )
+        else:
+            preferred_index = None
+
+        if preferred_index is None and self.have_imu_orientation:
+            preferred_index = min(
+                range(len(candidates)),
+                key=lambda idx: abs(_norm_angle(candidates[idx]['yaw'] - self.imu_yaw)),
+            )
+        elif preferred_index is None:
+            preferred_index = max(
+                range(len(candidates)),
+                key=lambda idx: candidates[idx]['weight'],
+            )
+
+        adjusted = []
+        for idx, candidate in enumerate(candidates):
+            adjusted_candidate = dict(candidate)
+            if idx != preferred_index:
+                adjusted_candidate['weight'] *= self.dual_imu_outlier_weight
+            adjusted.append(adjusted_candidate)
+
+        self._warn_throttled(warn_key, warn_message)
+        return adjusted
+
+    def _update_fused_imu_state(self, current_time_sec: float):
+        orientation_candidates = self._apply_dual_imu_outlier_guard(
+            self._orientation_candidates(current_time_sec),
+            'dual_imu_yaw_disagreement',
+            (
+                'Primary and secondary IMUs disagree on yaw by more than %.1f deg; '
+                'downweighting the outlier sensor'
+            )
+            % math.degrees(self.dual_imu_max_yaw_delta_rad),
+        )
+        if orientation_candidates:
+            weighted_yaw = _weighted_angle_average(
+                [(candidate['yaw'], candidate['weight']) for candidate in orientation_candidates]
+            )
+            if weighted_yaw is not None:
+                dominant = max(orientation_candidates, key=lambda candidate: candidate['weight'])
+                if self.have_imu_orientation and self.yaw_alpha < 1.0:
+                    delta = _norm_angle(weighted_yaw - self.imu_yaw)
+                    self.imu_yaw = _norm_angle(self.imu_yaw + self.yaw_alpha * delta)
+                else:
+                    self.imu_yaw = weighted_yaw
+                self.latest_orientation_quaternion = _quaternion_from_rpy(
+                    dominant['roll'],
+                    dominant['pitch'],
+                    self.imu_yaw,
+                )
+                self.latest_orientation_covariance = dominant['covariance']
+                self.have_imu_orientation = True
+
+        angular_velocity_candidates, accel_candidates = self._motion_candidates(current_time_sec)
+        if angular_velocity_candidates:
+            total_weight = sum(weight for _, weight, _ in angular_velocity_candidates)
+            if total_weight > 1e-6:
+                self.latest_angular_velocity_z = sum(
+                    value * weight for value, weight, _ in angular_velocity_candidates
+                ) / total_weight
+                dominant_covariance = max(
+                    angular_velocity_candidates,
+                    key=lambda candidate: candidate[1],
+                )[2]
+                self.latest_angular_velocity_covariance = dominant_covariance
+                self.have_angular_velocity = True
+        elif len(self.imu_states) > 1:
+            self.have_angular_velocity = False
+
+        if accel_candidates:
+            total_weight = sum(weight for _, weight in accel_candidates)
+            if total_weight > 1e-6:
+                self.latest_linear_acceleration = tuple(
+                    sum(accel[idx] * weight for accel, weight in accel_candidates) / total_weight
+                    for idx in range(3)
+                )
+                self.have_linear_acceleration = True
+        elif len(self.imu_states) > 1:
+            self.have_linear_acceleration = False
+
     @staticmethod
     def _orientation_from_imu_to_base(
         world_from_imu: Tuple[float, float, float, float],
@@ -337,8 +633,10 @@ class ImuOdomFusionNode(Node):
             _quaternion_multiply(world_from_imu, _quaternion_conjugate(base_from_imu))
         )
 
-    def handle_imu(self, msg):
-        source_frame = msg.header.frame_id if msg.header.frame_id else self.imu_frame_id
+    def handle_imu(self, msg, sensor_key='primary'):
+        state = self.imu_states[sensor_key]
+        fallback_frame = str(state['frame_id'])
+        source_frame = msg.header.frame_id if msg.header.frame_id else fallback_frame
         base_from_imu = self._lookup_imu_to_base_quaternion(source_frame)
         if base_from_imu is None:
             return
@@ -370,22 +668,20 @@ class ImuOdomFusionNode(Node):
             base_quat[3],
         )
 
-        if self.imu_yaw_ref is None:
-            self.imu_yaw_ref = raw_yaw if self.use_first_imu_as_zero else 0.0
+        if state['yaw_bias'] is None:
+            if self.have_imu_orientation:
+                state['yaw_bias'] = _norm_angle(self.imu_yaw - raw_yaw)
+            elif self.use_first_imu_as_zero:
+                state['yaw_bias'] = _norm_angle(self.yaw_offset_rad - raw_yaw)
+            else:
+                state['yaw_bias'] = self.yaw_offset_rad
 
-        measured_yaw = _norm_angle(raw_yaw - self.imu_yaw_ref + self.yaw_offset_rad)
-
-        if self.have_imu_orientation and self.yaw_alpha < 1.0:
-            delta = _norm_angle(measured_yaw - self.imu_yaw)
-            self.imu_yaw = _norm_angle(self.imu_yaw + self.yaw_alpha * delta)
-        else:
-            self.imu_yaw = measured_yaw
-
-        self.latest_orientation_quaternion = _quaternion_from_rpy(
-            raw_roll, raw_pitch, self.imu_yaw
-        )
-        self.latest_orientation_covariance = list(msg.orientation_covariance)
-        self.have_imu_orientation = True
+        state['measured_yaw'] = _norm_angle(raw_yaw + float(state['yaw_bias']))
+        state['raw_roll'] = raw_roll
+        state['raw_pitch'] = raw_pitch
+        state['latest_orientation_covariance'] = list(msg.orientation_covariance)
+        state['have_orientation'] = True
+        state['last_msg_time_sec'] = _stamp_to_sec(msg.header.stamp)
 
         accel = (
             float(msg.linear_acceleration.x),
@@ -396,24 +692,25 @@ class ImuOdomFusionNode(Node):
             base_accel = _rotate_vector(base_from_imu, accel)
             if self.estimate_imu_bias and abs(self.last_wheel_speed) <= self.zero_velocity_speed_threshold:
                 alpha = self.stationary_bias_alpha
-                self.forward_accel_bias = (
-                    (1.0 - alpha) * self.forward_accel_bias + alpha * base_accel[0]
+                state['forward_accel_bias'] = (
+                    (1.0 - alpha) * float(state['forward_accel_bias']) + alpha * base_accel[0]
                 )
             corrected_accel = (
-                base_accel[0] - self.forward_accel_bias,
+                base_accel[0] - float(state['forward_accel_bias']),
                 base_accel[1],
                 base_accel[2],
             )
-            if self.have_linear_acceleration:
+            if state['have_linear_acceleration']:
                 alpha = self.accel_lowpass_alpha
-                self.latest_linear_acceleration = (
-                    (1.0 - alpha) * self.latest_linear_acceleration[0] + alpha * corrected_accel[0],
-                    (1.0 - alpha) * self.latest_linear_acceleration[1] + alpha * corrected_accel[1],
-                    (1.0 - alpha) * self.latest_linear_acceleration[2] + alpha * corrected_accel[2],
+                previous_accel = tuple(state['latest_linear_acceleration'])
+                state['latest_linear_acceleration'] = (
+                    (1.0 - alpha) * previous_accel[0] + alpha * corrected_accel[0],
+                    (1.0 - alpha) * previous_accel[1] + alpha * corrected_accel[1],
+                    (1.0 - alpha) * previous_accel[2] + alpha * corrected_accel[2],
                 )
             else:
-                self.latest_linear_acceleration = corrected_accel
-            self.have_linear_acceleration = True
+                state['latest_linear_acceleration'] = corrected_accel
+            state['have_linear_acceleration'] = True
 
         angular_velocity = (
             float(msg.angular_velocity.x),
@@ -426,10 +723,16 @@ class ImuOdomFusionNode(Node):
             base_angular_velocity = _rotate_vector(base_from_imu, angular_velocity)
             if self.estimate_imu_bias and abs(self.last_wheel_speed) <= self.zero_velocity_speed_threshold:
                 alpha = self.stationary_bias_alpha
-                self.gyro_z_bias = (1.0 - alpha) * self.gyro_z_bias + alpha * base_angular_velocity[2]
-            self.latest_angular_velocity_z = base_angular_velocity[2] - self.gyro_z_bias
-            self.latest_angular_velocity_covariance = list(msg.angular_velocity_covariance)
-            self.have_angular_velocity = True
+                state['gyro_z_bias'] = (
+                    (1.0 - alpha) * float(state['gyro_z_bias']) + alpha * base_angular_velocity[2]
+                )
+            state['latest_angular_velocity_z'] = (
+                base_angular_velocity[2] - float(state['gyro_z_bias'])
+            )
+            state['latest_angular_velocity_covariance'] = list(msg.angular_velocity_covariance)
+            state['have_angular_velocity'] = True
+
+        self._update_fused_imu_state(float(state['last_msg_time_sec']))
 
     def handle_wheel_odom(self, msg):
         current_sec = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
@@ -450,6 +753,8 @@ class ImuOdomFusionNode(Node):
         )
         wheel_speed = float(msg.twist.twist.linear.x) * self.linear_speed_scale
         self.last_wheel_speed = wheel_speed
+        self._log_speed_blend_mode(wheel_speed)
+        wheel_speed_alpha = self._active_wheel_speed_alpha(wheel_speed)
 
         if not self.initialized:
             self.x = float(msg.pose.pose.position.x)
@@ -484,8 +789,8 @@ class ImuOdomFusionNode(Node):
                 )
                 pred_speed = self.forward_speed + forward_accel * dt
                 fused_speed = (
-                    self.wheel_speed_alpha * wheel_speed
-                    + (1.0 - self.wheel_speed_alpha) * pred_speed
+                    wheel_speed_alpha * wheel_speed
+                    + (1.0 - wheel_speed_alpha) * pred_speed
                 )
                 if (
                     abs(wheel_speed) <= self.zero_velocity_speed_threshold
@@ -504,7 +809,7 @@ class ImuOdomFusionNode(Node):
                 world_accel = _rotate_vector(self.latest_orientation_quaternion, clamped_body_accel)
                 pred_vx = self.vx + world_accel[0] * dt
                 pred_vy = self.vy + world_accel[1] * dt
-                alpha = self.wheel_speed_alpha
+                alpha = wheel_speed_alpha
                 self.vx = alpha * wheel_vx + (1.0 - alpha) * pred_vx
                 self.vy = alpha * wheel_vy + (1.0 - alpha) * pred_vy
 

@@ -15,6 +15,9 @@ imu_odom_fusion_node:
     accel_fusion_mode: "longitudinal"
     use_accel_fusion: true
     wheel_speed_alpha: 0.45
+    high_speed_wheel_speed_alpha: 0.90
+    high_speed_erpm_threshold: 10000.0
+    speed_to_erpm_gain: 3278.071192
     accel_lowpass_alpha: 0.25
     stationary_bias_alpha: 0.02
     estimate_imu_bias: true

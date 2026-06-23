@@ -147,6 +147,38 @@ def generate_launch_description():
         'imu_yaw_alpha',
         default_value='0.3',
         description='IMU yaw smoothing factor in [0,1], higher tracks faster')
+    secondary_imu_topic_la = DeclareLaunchArgument(
+        'secondary_imu_topic',
+        default_value='',
+        description='Optional secondary IMU topic fused with the primary IMU heading')
+    secondary_imu_frame_id_la = DeclareLaunchArgument(
+        'secondary_imu_frame_id',
+        default_value='base_link',
+        description='Fallback frame id for the optional secondary IMU if messages omit header.frame_id')
+    secondary_imu_weight_la = DeclareLaunchArgument(
+        'secondary_imu_weight',
+        default_value='0.35',
+        description='Relative heading weight assigned to the secondary IMU when both are healthy')
+    secondary_imu_angular_velocity_weight_la = DeclareLaunchArgument(
+        'secondary_imu_angular_velocity_weight',
+        default_value='0.5',
+        description='Relative yaw-rate weight assigned to the secondary IMU when both are healthy')
+    secondary_imu_timeout_sec_la = DeclareLaunchArgument(
+        'secondary_imu_timeout_sec',
+        default_value='0.25',
+        description='Maximum age difference allowed before a secondary IMU sample is treated as stale')
+    dual_imu_max_yaw_delta_rad_la = DeclareLaunchArgument(
+        'dual_imu_max_yaw_delta_rad',
+        default_value='0.35',
+        description='Yaw disagreement threshold that triggers IMU outlier downweighting')
+    dual_imu_outlier_weight_la = DeclareLaunchArgument(
+        'dual_imu_outlier_weight',
+        default_value='0.1',
+        description='Residual weight kept on the outlier IMU after a large yaw disagreement')
+    prefer_secondary_imu_on_yaw_disagreement_la = DeclareLaunchArgument(
+        'prefer_secondary_imu_on_yaw_disagreement',
+        default_value='false',
+        description='Prefer the secondary IMU when dual IMUs strongly disagree on yaw')
     imu_linear_speed_scale_la = DeclareLaunchArgument(
         'imu_linear_speed_scale',
         default_value='1.0',
@@ -247,6 +279,10 @@ def generate_launch_description():
             hall_odom_la,
             imu_topic_la, imu_fused_odom_topic_la, imu_wheel_odom_topic_la,
             imu_fusion_publish_tf_la, imu_yaw_offset_la, imu_yaw_alpha_la,
+            secondary_imu_topic_la, secondary_imu_frame_id_la, secondary_imu_weight_la,
+            secondary_imu_angular_velocity_weight_la, secondary_imu_timeout_sec_la,
+            dual_imu_max_yaw_delta_rad_la, dual_imu_outlier_weight_la,
+            prefer_secondary_imu_on_yaw_disagreement_la,
             imu_linear_speed_scale_la, imu_wheel_speed_alpha_la,
             launch_static_tf_la, imu_static_x_la, imu_static_y_la, imu_static_z_la,
             imu_static_yaw_la, imu_static_pitch_la, imu_static_roll_la,
@@ -388,6 +424,18 @@ def generate_launch_description():
                 'linear_speed_scale': LaunchConfiguration('imu_linear_speed_scale'),
                 'yaw_offset_rad': LaunchConfiguration('imu_yaw_offset_rad'),
                 'yaw_alpha': LaunchConfiguration('imu_yaw_alpha'),
+                'secondary_imu_topic': LaunchConfiguration('secondary_imu_topic'),
+                'secondary_imu_frame_id': LaunchConfiguration('secondary_imu_frame_id'),
+                'secondary_imu_weight': LaunchConfiguration('secondary_imu_weight'),
+                'secondary_imu_angular_velocity_weight': LaunchConfiguration(
+                    'secondary_imu_angular_velocity_weight'
+                ),
+                'secondary_imu_timeout_sec': LaunchConfiguration('secondary_imu_timeout_sec'),
+                'dual_imu_max_yaw_delta_rad': LaunchConfiguration('dual_imu_max_yaw_delta_rad'),
+                'dual_imu_outlier_weight': LaunchConfiguration('dual_imu_outlier_weight'),
+                'prefer_secondary_imu_on_yaw_disagreement': LaunchConfiguration(
+                    'prefer_secondary_imu_on_yaw_disagreement'
+                ),
                 'wheel_speed_alpha': LaunchConfiguration('imu_wheel_speed_alpha'),
             },
         ],
