@@ -52,6 +52,11 @@ def generate_launch_description():
         'config',
         'mux.yaml',
     )
+    default_sensors_config = os.path.join(
+        f1tenth_share,
+        'config',
+        'sensors.yaml',
+    )
     imu_fusion_pf_config = os.path.join(
         f1tenth_share,
         'config',
@@ -77,6 +82,11 @@ def generate_launch_description():
         'mux_config',
         default_value=default_mux_config,
         description='Ackermann mux config file path',
+    )
+    sensors_config_la = DeclareLaunchArgument(
+        'sensors_config',
+        default_value=default_sensors_config,
+        description='LiDAR/other sensor config file path passed to bringup',
     )
     imu_yaw_offset_la = DeclareLaunchArgument(
         'imu_yaw_offset_rad',
@@ -147,6 +157,7 @@ def generate_launch_description():
             'launch_hall_odom': 'false',
             'vesc_config': vesc_imu_fusion_config,
             'mux_config': LaunchConfiguration('mux_config'),
+            'sensors_config': LaunchConfiguration('sensors_config'),
             'launch_usb_imu': 'false',
             'launch_bno085_i2c': 'true',
             'launch_imu_fusion': 'true',
@@ -203,6 +214,7 @@ def generate_launch_description():
             map_yaml_la,
             vesc_driver_log_level_la,
             mux_config_la,
+            sensors_config_la,
             imu_yaw_offset_la,
             imu_yaw_alpha_la,
             imu_linear_speed_scale_la,
