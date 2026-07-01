@@ -7,7 +7,7 @@
 
     # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
     steering_angle_to_servo_gain: -1.2135
-    steering_angle_to_servo_offset: 0.4669
+    steering_angle_to_servo_offset: 0.5000
     joy_topic: /joy
     deadman_button_index: 4
     deadman_button_index_alt: 5
