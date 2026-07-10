@@ -143,6 +143,16 @@ def generate_launch_description():
         default_value=imu_fusion_pf_config,
         description='Path to IMU/wheel odom fusion config yaml used for PF bringup',
     )
+    launch_imu_fusion_la = DeclareLaunchArgument(
+        'launch_imu_fusion',
+        default_value='true',
+        description='Launch the IMU/wheel odom fusion node',
+    )
+    launch_bno085_i2c_la = DeclareLaunchArgument(
+        'launch_bno085_i2c',
+        default_value='true',
+        description='Launch the BNO085 I2C IMU node',
+    )
 
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -159,8 +169,8 @@ def generate_launch_description():
             'mux_config': LaunchConfiguration('mux_config'),
             'sensors_config': LaunchConfiguration('sensors_config'),
             'launch_usb_imu': 'false',
-            'launch_bno085_i2c': 'true',
-            'launch_imu_fusion': 'true',
+            'launch_bno085_i2c': LaunchConfiguration('launch_bno085_i2c'),
+            'launch_imu_fusion': LaunchConfiguration('launch_imu_fusion'),
             'imu_fusion_config': LaunchConfiguration('imu_fusion_config'),
             'imu_topic': '/sensors/imu/raw',
             'imu_fused_odom_topic': '/odometry/imu_fused',
@@ -226,6 +236,8 @@ def generate_launch_description():
             secondary_imu_timeout_sec_la,
             prefer_secondary_imu_on_yaw_disagreement_la,
             imu_fusion_config_la,
+            launch_imu_fusion_la,
+            launch_bno085_i2c_la,
             bringup_launch,
             particle_filter_launch,
             print_usage_instructions,
