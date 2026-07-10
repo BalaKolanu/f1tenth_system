@@ -25,6 +25,7 @@
     # Keep the onboard VESC IMU disabled in standard bringup so the external
     # BNO085 remains the sole source for /sensors/imu/raw.
     publish_imu: false
+    brake_speed_holdoff_sec: 0.10
 
 ackermann_to_vesc_node:
   ros__parameters:
