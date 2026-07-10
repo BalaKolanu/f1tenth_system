@@ -196,14 +196,14 @@ def generate_launch_description():
         launch_arguments={
             'localize_config': LaunchConfiguration('localize_config'),
             'map_yaml': LaunchConfiguration('map_yaml'),
-            'odometry_topic': '/odometry/imu_fused',
+            'odometry_topic': '/odom',
         }.items(),
     )
 
     print_usage_instructions = LogInfo(
         msg='Particle filter GPU localization mode started.\n'
             'Edit particle_filter localize config to select map and GPU options.\n'
-            'Odometry source: /odometry/imu_fused (IMU + wheel-odom fusion).\n'
+            'Odometry source: /odom (raw VESC wheel odom).\n'
             'Default config: ' + default_localize_config + '\n'
             'In RViz, use "2D Pose Estimate" to initialize PF.\n'
     )

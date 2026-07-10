@@ -64,10 +64,10 @@ vesc_to_odom_node:
     speed_to_erpm_offset: 0.0
     odom_frame: odom
     base_frame: base_link
-    # TF is published by imu_odom_fusion_node for a single odom->base_link source.
+    # PF owns map->base_link TF during localization; do not also publish raw odom TF.
     publish_tf: false
-    # Ignore steering-derived yaw; heading comes from IMU fusion.
-    use_servo_cmd_to_calc_angular_velocity: false
+    # PF now consumes raw /odom, so VESC odom must include steering-derived yaw.
+    use_servo_cmd_to_calc_angular_velocity: true
     wheelbase: .324
 
 throttle_interpolator:
