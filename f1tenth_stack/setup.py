@@ -37,6 +37,7 @@ setup(
             'bno085_i2c_node = f1tenth_stack.bno085_i2c_node:main',
             'safe_rosbridge_websocket = f1tenth_stack.safe_rosbridge_websocket:main',
             'emergency_brake_override = f1tenth_stack.emergency_brake_override:main',
+            'autonomy_toggle = f1tenth_stack.autonomy_toggle:main',
         ],
     },
 )

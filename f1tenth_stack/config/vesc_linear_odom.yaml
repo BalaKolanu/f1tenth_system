@@ -29,15 +29,6 @@
 
 ackermann_to_vesc_node:
   ros__parameters:
-    joy_topic: /joy
-    deadman_button_index: 4
-    deadman_button_index_alt: 5
-    deadman_timeout_sec: 0.5
-    autonomy_override_enabled: true
-    autonomy_override_topic: /safety/autonomy_enabled
-    autonomy_override_timeout_sec: 0.5
-    deadman_active_brake: true
-    deadman_brake_current: 30.0
     command_timeout_sec: 0.25
     command_timeout_brake_current: 8.0
     active_braking_enabled: true

@@ -123,6 +123,30 @@ def generate_launch_description():
         'launch_imu_fusion',
         default_value='false',
         description='Launch IMU + wheel odom fusion node')
+    launch_autonomy_toggle_la = DeclareLaunchArgument(
+        'launch_autonomy_toggle',
+        default_value='true',
+        description='Launch system autonomy start/stop toggle publisher')
+    autonomy_toggle_joy_topic_la = DeclareLaunchArgument(
+        'autonomy_toggle_joy_topic',
+        default_value='/joy',
+        description='Joystick topic consumed by the autonomy toggle node')
+    autonomy_toggle_button_index_la = DeclareLaunchArgument(
+        'autonomy_toggle_button_index',
+        default_value='5',
+        description='Joystick button index used by autonomy start/stop toggle')
+    autonomy_enabled_topic_la = DeclareLaunchArgument(
+        'autonomy_enabled_topic',
+        default_value='/safety/autonomy_enabled',
+        description='Bool topic published by autonomy toggle and consumed by controllers')
+    autonomy_toggle_publish_hz_la = DeclareLaunchArgument(
+        'autonomy_toggle_publish_hz',
+        default_value='20.0',
+        description='Autonomy enabled state publish rate')
+    autonomy_toggle_startup_enabled_la = DeclareLaunchArgument(
+        'autonomy_toggle_startup_enabled',
+        default_value='false',
+        description='Initial autonomy enabled state before the first button action')
     imu_topic_la = DeclareLaunchArgument(
         'imu_topic',
         default_value='/sensors/imu/raw',
@@ -276,6 +300,9 @@ def generate_launch_description():
         [
             joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, bno085_i2c_la,
             imu_fusion_la, imu_frame_id_la, vesc_imu_frame_id_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
+            launch_autonomy_toggle_la, autonomy_toggle_joy_topic_la,
+            autonomy_toggle_button_index_la, autonomy_enabled_topic_la,
+            autonomy_toggle_publish_hz_la, autonomy_toggle_startup_enabled_la,
             hall_odom_la,
             imu_topic_la, imu_fused_odom_topic_la, imu_wheel_odom_topic_la,
             imu_fusion_publish_tf_la, imu_yaw_offset_la, imu_yaw_alpha_la,
@@ -306,6 +333,22 @@ def generate_launch_description():
         executable='joy_teleop',
         name='joy_teleop',
         parameters=[LaunchConfiguration('joy_config')]
+    )
+    autonomy_toggle_node = Node(
+        package='f1tenth_stack',
+        executable='autonomy_toggle',
+        name='autonomy_toggle',
+        output='screen',
+        parameters=[
+            {
+                'joy_topic': LaunchConfiguration('autonomy_toggle_joy_topic'),
+                'button_index': LaunchConfiguration('autonomy_toggle_button_index'),
+                'enabled_topic': LaunchConfiguration('autonomy_enabled_topic'),
+                'publish_hz': LaunchConfiguration('autonomy_toggle_publish_hz'),
+                'startup_enabled': LaunchConfiguration('autonomy_toggle_startup_enabled'),
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration('launch_autonomy_toggle')),
     )
     ackermann_to_vesc_node = Node(
         package='vesc_ackermann',
@@ -482,6 +525,7 @@ def generate_launch_description():
     # finalize
     ld.add_action(joy_node)
     ld.add_action(joy_teleop_node)
+    ld.add_action(autonomy_toggle_node)
     ld.add_action(ackermann_to_vesc_node)
     ld.add_action(vesc_to_odom_node)
     ld.add_action(hall_wheel_odom_node)

@@ -153,6 +153,41 @@ def generate_launch_description():
         default_value='true',
         description='Launch the BNO085 I2C IMU node',
     )
+    launch_autonomy_toggle_la = DeclareLaunchArgument(
+        'launch_autonomy_toggle',
+        default_value='true',
+        description='Launch system autonomy start/stop toggle publisher',
+    )
+    autonomy_toggle_joy_topic_la = DeclareLaunchArgument(
+        'autonomy_toggle_joy_topic',
+        default_value='/joy',
+        description='Joystick topic consumed by the autonomy toggle node',
+    )
+    autonomy_toggle_button_index_la = DeclareLaunchArgument(
+        'autonomy_toggle_button_index',
+        default_value='5',
+        description='Joystick button index used by autonomy start/stop toggle',
+    )
+    autonomy_enabled_topic_la = DeclareLaunchArgument(
+        'autonomy_enabled_topic',
+        default_value='/safety/autonomy_enabled',
+        description='Bool topic published by autonomy toggle and consumed by controllers',
+    )
+    autonomy_toggle_publish_hz_la = DeclareLaunchArgument(
+        'autonomy_toggle_publish_hz',
+        default_value='20.0',
+        description='Autonomy enabled state publish rate',
+    )
+    autonomy_toggle_startup_enabled_la = DeclareLaunchArgument(
+        'autonomy_toggle_startup_enabled',
+        default_value='false',
+        description='Initial autonomy enabled state before the first button action',
+    )
+    launch_emergency_brake_override_la = DeclareLaunchArgument(
+        'launch_emergency_brake_override',
+        default_value='true',
+        description='Launch emergency brake motor override node',
+    )
 
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -192,6 +227,19 @@ def generate_launch_description():
             # Keep base_link->laser static TF for a connected map/base/laser tree.
             'launch_static_tf': 'true',
             'vesc_driver_log_level': LaunchConfiguration('vesc_driver_log_level'),
+            'launch_autonomy_toggle': LaunchConfiguration('launch_autonomy_toggle'),
+            'autonomy_toggle_joy_topic': LaunchConfiguration('autonomy_toggle_joy_topic'),
+            'autonomy_toggle_button_index': LaunchConfiguration(
+                'autonomy_toggle_button_index'
+            ),
+            'autonomy_enabled_topic': LaunchConfiguration('autonomy_enabled_topic'),
+            'autonomy_toggle_publish_hz': LaunchConfiguration('autonomy_toggle_publish_hz'),
+            'autonomy_toggle_startup_enabled': LaunchConfiguration(
+                'autonomy_toggle_startup_enabled'
+            ),
+            'launch_emergency_brake_override': LaunchConfiguration(
+                'launch_emergency_brake_override'
+            ),
         }.items(),
     )
 
@@ -238,6 +286,13 @@ def generate_launch_description():
             imu_fusion_config_la,
             launch_imu_fusion_la,
             launch_bno085_i2c_la,
+            launch_autonomy_toggle_la,
+            autonomy_toggle_joy_topic_la,
+            autonomy_toggle_button_index_la,
+            autonomy_enabled_topic_la,
+            autonomy_toggle_publish_hz_la,
+            autonomy_toggle_startup_enabled_la,
+            launch_emergency_brake_override_la,
             bringup_launch,
             particle_filter_launch,
             print_usage_instructions,

@@ -8,16 +8,6 @@
     # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
     steering_angle_to_servo_gain: -1.2135
     steering_angle_to_servo_offset: 0.5000
-    joy_topic: /joy
-    deadman_button_index: 4
-    deadman_button_index_alt: 5
-    deadman_timeout_sec: 0.5
-    autonomy_override_enabled: true
-    autonomy_override_topic: /safety/autonomy_enabled
-    autonomy_override_timeout_sec: 0.5
-    deadman_active_brake: true
-    deadman_brake_current: 30.0
-
     port: /dev/sensors/vesc
     duty_cycle_min: 0.0
     duty_cycle_max: 0.0
