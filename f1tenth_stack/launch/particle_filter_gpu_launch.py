@@ -183,12 +183,6 @@ def generate_launch_description():
         default_value='false',
         description='Initial autonomy enabled state before the first button action',
     )
-    launch_emergency_brake_override_la = DeclareLaunchArgument(
-        'launch_emergency_brake_override',
-        default_value='true',
-        description='Launch emergency brake motor override node',
-    )
-
     bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -236,9 +230,6 @@ def generate_launch_description():
             'autonomy_toggle_publish_hz': LaunchConfiguration('autonomy_toggle_publish_hz'),
             'autonomy_toggle_startup_enabled': LaunchConfiguration(
                 'autonomy_toggle_startup_enabled'
-            ),
-            'launch_emergency_brake_override': LaunchConfiguration(
-                'launch_emergency_brake_override'
             ),
         }.items(),
     )
@@ -292,7 +283,6 @@ def generate_launch_description():
             autonomy_enabled_topic_la,
             autonomy_toggle_publish_hz_la,
             autonomy_toggle_startup_enabled_la,
-            launch_emergency_brake_override_la,
             bringup_launch,
             particle_filter_launch,
             print_usage_instructions,

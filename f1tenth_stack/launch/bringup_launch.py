@@ -279,23 +279,6 @@ def generate_launch_description():
         'tf_speed_target_frame',
         default_value='base_link',
         description='Target frame for TF speed monitor')
-    launch_emergency_brake_override_la = DeclareLaunchArgument(
-        'launch_emergency_brake_override',
-        default_value='true',
-        description='Launch emergency brake motor override node')
-    emergency_brake_request_topic_la = DeclareLaunchArgument(
-        'emergency_brake_request_topic',
-        default_value='/safety/emergency_brake',
-        description='Bool topic that engages emergency brake override')
-    emergency_brake_current_la = DeclareLaunchArgument(
-        'emergency_brake_current',
-        default_value='500.0',
-        description='Brake current command applied while emergency brake is active')
-    emergency_brake_publish_hz_la = DeclareLaunchArgument(
-        'emergency_brake_publish_hz',
-        default_value='100.0',
-        description='Rate used to continuously override VESC speed/brake commands')
-
     ld = LaunchDescription(
         [
             joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, bno085_i2c_la,
@@ -316,9 +299,7 @@ def generate_launch_description():
             vesc_to_odom_la, launch_hall_odom_la, vesc_driver_log_level_la, vesc_publish_imu_la,
             motor_speed_output_topic_la, launch_tf_speed_monitor_la,
             tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
-            tf_speed_source_frame_la, tf_speed_target_frame_la,
-            launch_emergency_brake_override_la, emergency_brake_request_topic_la,
-            emergency_brake_current_la, emergency_brake_publish_hz_la
+            tf_speed_source_frame_la, tf_speed_target_frame_la
         ]
     )
 
@@ -504,24 +485,6 @@ def generate_launch_description():
         ],
         condition=IfCondition(LaunchConfiguration('launch_tf_speed_monitor'))
     )
-    emergency_brake_override_node = Node(
-        package='f1tenth_stack',
-        executable='emergency_brake_override',
-        name='emergency_brake_override',
-        output='screen',
-        parameters=[
-            {
-                'brake_request_topic': LaunchConfiguration('emergency_brake_request_topic'),
-                'motor_speed_topic': LaunchConfiguration('motor_speed_output_topic'),
-                'motor_brake_topic': 'commands/motor/brake',
-                'publish_rate_hz': LaunchConfiguration('emergency_brake_publish_hz'),
-                'brake_current': LaunchConfiguration('emergency_brake_current'),
-                'zero_speed_erpm': 0.0,
-            }
-        ],
-        condition=IfCondition(LaunchConfiguration('launch_emergency_brake_override'))
-    )
-
     # finalize
     ld.add_action(joy_node)
     ld.add_action(joy_teleop_node)
@@ -538,6 +501,5 @@ def generate_launch_description():
     ld.add_action(bno085_i2c_node)
     ld.add_action(imu_odom_fusion_node)
     ld.add_action(tf_speed_monitor_node)
-    ld.add_action(emergency_brake_override_node)
 
     return ld

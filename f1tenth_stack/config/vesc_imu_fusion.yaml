@@ -15,10 +15,10 @@
     duty_cycle_max: 0.0
     current_min: 0.0
     current_max: 100.0
-    brake_min: -20000.0
+    brake_min: 0.0
     brake_max: 200000.0
-    speed_min: -23250.0
-    speed_max: 23250.0
+    speed_min: -50000.0
+    speed_max: 50000.0
     position_min: 0.0
     position_max: 0.0
     servo_min: 0.0
@@ -31,9 +31,9 @@
 ackermann_to_vesc_node:
   ros__parameters:
     command_timeout_sec: 0.25
-    command_timeout_brake_current: 8.0
-    active_braking_enabled: true
-    runtime_active_braking_default_enabled: true
+    command_timeout_brake_current: 0.0
+    active_braking_enabled: false
+    runtime_active_braking_default_enabled: false
     active_braking_enable_topic: /safety/vesc_active_braking_enabled
     active_braking_enable_timeout_sec: 0.5
     active_brake_min_current: 1.0
