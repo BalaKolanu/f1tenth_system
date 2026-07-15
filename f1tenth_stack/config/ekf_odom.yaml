@@ -1,0 +1,41 @@
+ekf_odom_node:
+  ros__parameters:
+    # Inputs and output. This node is opt-in and does not replace the existing
+    # imu_odom_fusion_node or change the race pipeline by itself.
+    imu_topic: "/sensors/imu/raw"
+    wheel_odom_topic: "/odom"
+    output_topic: "/odometry/ekf"
+    odom_frame: "odom"
+    base_frame: "base_link"
+    publish_tf: false
+
+    # The VESC quaternion supplies a relative heading correction. Zeroing the
+    # first sample avoids requiring magnetic north or a global initial heading.
+    use_imu_orientation: true
+    # Keep acceleration out of the prediction until vibration/gravity removal
+    # is validated. Wheel speed is the trusted longitudinal measurement.
+    use_accel_prediction: false
+    zero_initial_yaw: true
+    initialize_position_from_wheel_odom: true
+    wheel_speed_scale: 1.0
+    max_dt_sec: 0.1
+
+    # Process noise standard deviations.
+    gyro_noise_std: 0.05
+    accel_noise_std: 0.8
+    gyro_bias_rw_std: 0.002
+    accel_bias_rw_std: 0.05
+    initial_gyro_bias: 0.0
+    initial_accel_bias: 0.0
+
+    # Used when incoming ROS covariance arrays contain zero/unknown variance.
+    wheel_speed_std: 0.20
+    imu_yaw_std: 0.03
+
+    # Reject isolated measurements farther than this many standard deviations.
+    wheel_innovation_gate_sigma: 6.0
+    yaw_innovation_gate_sigma: 6.0
+    measurement_recovery_rejections: 20
+
+    # Diagonal covariance for [x, y, yaw, speed, gyro_bias, accel_bias].
+    initial_covariance: [1.0, 1.0, 0.25, 1.0, 0.04, 0.25]

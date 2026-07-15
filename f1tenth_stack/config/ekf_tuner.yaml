@@ -1,0 +1,16 @@
+ekf_tuner_node:
+  ros__parameters:
+    pf_odom_topic: "/pf/pose/odom"
+    ekf_odom_topic: "/odometry/ekf"
+    wheel_odom_topic: "/odom"
+    imu_topic: "/sensors/imu/raw"
+    report_topic: "/diagnostics/ekf_tuning"
+    report_period_sec: 2.0
+    max_sensor_age_sec: 0.15
+    min_reference_dt_sec: 0.03
+    max_reference_dt_sec: 0.5
+    min_wheel_speed_mps: 0.5
+    max_reference_speed_mps: 15.0
+    max_reference_yaw_rate_rps: 8.0
+    estimator_alpha: 0.03
+    minimum_samples: 50

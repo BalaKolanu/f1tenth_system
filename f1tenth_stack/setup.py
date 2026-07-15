@@ -30,6 +30,8 @@ setup(
             'tf_speed_monitor = f1tenth_stack.tf_speed_monitor:main',
             'tf_pose_reference_publisher = f1tenth_stack.tf_pose_reference_publisher:main',
             'imu_odom_fusion_node = f1tenth_stack.imu_odom_fusion_node:main',
+            'ekf_odom_node = f1tenth_stack.ekf_odom_node:main',
+            'ekf_tuner_node = f1tenth_stack.ekf_tuner_node:main',
             'hall_wheel_odom_node = f1tenth_stack.hall_wheel_odom_node:main',
             'scanmatching_imu_odom_node = f1tenth_stack.scanmatching_imu_odom_node:main',
             'linear_odom_calibrator = f1tenth_stack.linear_odom_calibrator:main',

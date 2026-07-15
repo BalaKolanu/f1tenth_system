@@ -27,6 +27,7 @@
   <depend>ackermann_mux</depend>
   <depend>particle_filter</depend>
   <depend>std_msgs</depend>
+  <exec_depend>python3-numpy</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

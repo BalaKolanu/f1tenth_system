@@ -21,9 +21,8 @@
     position_max: 0.0
     servo_min: 0.0
     servo_max: 1.0
-    # Keep the onboard VESC IMU disabled in standard bringup so the external
-    # BNO085 remains the sole source for /sensors/imu/raw.
-    publish_imu: false
+    # The onboard VESC IMU is the car's primary IMU source.
+    publish_imu: true
     brake_speed_holdoff_sec: 0.10
 
 # No longer needed, all parameters are shared

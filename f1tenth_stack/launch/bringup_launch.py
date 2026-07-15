@@ -22,7 +22,7 @@
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from ament_index_python.packages import get_package_share_directory
@@ -117,8 +117,8 @@ def generate_launch_description():
         description='Launch USB serial IMU publisher node')
     launch_bno085_i2c_la = DeclareLaunchArgument(
         'launch_bno085_i2c',
-        default_value='true',
-        description='Launch BNO085 I2C IMU publisher node')
+        default_value='false',
+        description='Deprecated compatibility argument; the removed BNO085 is never launched')
     launch_imu_fusion_la = DeclareLaunchArgument(
         'launch_imu_fusion',
         default_value='false',
@@ -254,7 +254,7 @@ def generate_launch_description():
     vesc_publish_imu_la = DeclareLaunchArgument(
         'vesc_publish_imu',
         default_value='true',
-        description='Publish onboard VESC IMU data on diagnostic-only VESC-specific topics')
+        description='Publish the onboard VESC IMU as the primary system IMU')
     motor_speed_output_topic_la = DeclareLaunchArgument(
         'motor_speed_output_topic',
         default_value='commands/motor/speed',
@@ -366,10 +366,6 @@ def generate_launch_description():
                 'imu_frame_id': LaunchConfiguration('vesc_imu_frame_id'),
             },
         ],
-        remappings=[
-            ('sensors/imu', '/sensors/vesc/imu'),
-            ('sensors/imu/raw', '/sensors/vesc/imu/raw'),
-        ],
         arguments=[
             '--ros-args',
             '--log-level',
@@ -410,7 +406,12 @@ def generate_launch_description():
             'base_link',
             LaunchConfiguration('imu_frame_id'),
         ],
-        condition=IfCondition(LaunchConfiguration('launch_static_tf'))
+        # The VESC IMU is already expressed in base_link. This transform is only
+        # needed when the optional external USB IMU is explicitly enabled.
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration('launch_static_tf'), "'.lower() == 'true' and '",
+            LaunchConfiguration('launch_usb_imu'), "'.lower() == 'true'",
+        ]))
     )
     usb_imu_node = Node(
         package='f1tenth_stack',
@@ -421,16 +422,6 @@ def generate_launch_description():
             {'frame_id': LaunchConfiguration('imu_frame_id')},
         ],
         condition=IfCondition(LaunchConfiguration('launch_usb_imu'))
-    )
-    bno085_i2c_node = Node(
-        package='f1tenth_stack',
-        executable='bno085_i2c_node',
-        name='bno085_i2c_node',
-        parameters=[
-            LaunchConfiguration('imu_i2c_config'),
-            {'frame_id': LaunchConfiguration('imu_frame_id')},
-        ],
-        condition=IfCondition(LaunchConfiguration('launch_bno085_i2c'))
     )
     imu_odom_fusion_node = Node(
         package='f1tenth_stack',
@@ -498,7 +489,6 @@ def generate_launch_description():
     ld.add_action(static_tf_node)
     ld.add_action(static_imu_tf_node)
     ld.add_action(usb_imu_node)
-    ld.add_action(bno085_i2c_node)
     ld.add_action(imu_odom_fusion_node)
     ld.add_action(tf_speed_monitor_node)
 

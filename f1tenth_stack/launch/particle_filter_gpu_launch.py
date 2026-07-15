@@ -73,6 +73,11 @@ def generate_launch_description():
         default_value=default_map_yaml,
         description='Full path to occupancy map yaml file used by particle_filter map_server',
     )
+    odometry_topic_la = DeclareLaunchArgument(
+        'odometry_topic',
+        default_value='/odom',
+        description='Odometry topic consumed by the particle filter',
+    )
     vesc_driver_log_level_la = DeclareLaunchArgument(
         'vesc_driver_log_level',
         default_value='warn',
@@ -150,8 +155,8 @@ def generate_launch_description():
     )
     launch_bno085_i2c_la = DeclareLaunchArgument(
         'launch_bno085_i2c',
-        default_value='true',
-        description='Launch the BNO085 I2C IMU node',
+        default_value='false',
+        description='Deprecated compatibility argument; the removed BNO085 is never launched',
     )
     launch_autonomy_toggle_la = DeclareLaunchArgument(
         'launch_autonomy_toggle',
@@ -245,22 +250,25 @@ def generate_launch_description():
         launch_arguments={
             'localize_config': LaunchConfiguration('localize_config'),
             'map_yaml': LaunchConfiguration('map_yaml'),
-            'odometry_topic': '/odom',
+            'odometry_topic': LaunchConfiguration('odometry_topic'),
         }.items(),
     )
 
     print_usage_instructions = LogInfo(
-        msg='Particle filter GPU localization mode started.\n'
-            'Edit particle_filter localize config to select map and GPU options.\n'
-            'Odometry source: /odom (raw VESC wheel odom).\n'
-            'Default config: ' + default_localize_config + '\n'
-            'In RViz, use "2D Pose Estimate" to initialize PF.\n'
+        msg=[
+            'Particle filter GPU localization mode started.\n',
+            'Edit particle_filter localize config to select map and GPU options.\n',
+            'Odometry source: ', LaunchConfiguration('odometry_topic'), '\n',
+            'Default config: ', default_localize_config, '\n',
+            'In RViz, use "2D Pose Estimate" to initialize PF.\n',
+        ]
     )
 
     return LaunchDescription(
         [
             localize_config_la,
             map_yaml_la,
+            odometry_topic_la,
             vesc_driver_log_level_la,
             mux_config_la,
             sensors_config_la,

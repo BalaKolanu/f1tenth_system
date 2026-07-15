@@ -113,7 +113,7 @@ def generate_launch_description():
             'imu_fusion_config': imu_orientation_only_config,
             'motor_speed_output_topic': 'commands/motor/unclipped_speed',
             'launch_usb_imu': 'false',
-            'launch_bno085_i2c': 'true',
+            'launch_bno085_i2c': 'false',
             'launch_imu_fusion': 'true',
             'imu_topic': LaunchConfiguration('imu_topic'),
             'imu_fused_odom_topic': '/odometry/imu_fused',
