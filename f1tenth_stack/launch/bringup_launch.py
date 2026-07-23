@@ -247,6 +247,11 @@ def generate_launch_description():
         'launch_hall_odom',
         default_value='true',
         description='Launch Hall sensor wheel odom node as the sole /odom publisher')
+    launch_throttle_interpolator_la = DeclareLaunchArgument(
+        'launch_throttle_interpolator',
+        default_value='false',
+        description='Launch the throttle interpolator between unsmoothed and driver speed topics',
+    )
     vesc_driver_log_level_la = DeclareLaunchArgument(
         'vesc_driver_log_level',
         default_value='warn',
@@ -296,7 +301,8 @@ def generate_launch_description():
             imu_linear_speed_scale_la, imu_wheel_speed_alpha_la,
             launch_static_tf_la, imu_static_x_la, imu_static_y_la, imu_static_z_la,
             imu_static_yaw_la, imu_static_pitch_la, imu_static_roll_la,
-            vesc_to_odom_la, launch_hall_odom_la, vesc_driver_log_level_la, vesc_publish_imu_la,
+            vesc_to_odom_la, launch_hall_odom_la, launch_throttle_interpolator_la,
+            vesc_driver_log_level_la, vesc_publish_imu_la,
             motor_speed_output_topic_la, launch_tf_speed_monitor_la,
             tf_speed_publish_hz_la, tf_speed_lowpass_alpha_la,
             tf_speed_source_frame_la, tf_speed_target_frame_la
@@ -339,6 +345,19 @@ def generate_launch_description():
         remappings=[
             ('commands/motor/speed', LaunchConfiguration('motor_speed_output_topic'))
         ],
+    )
+    throttle_interpolator_node = Node(
+        package='f1tenth_stack',
+        executable='throttle_interpolator',
+        name='throttle_interpolator',
+        output='screen',
+        parameters=[
+            LaunchConfiguration('vesc_config'),
+            {
+                'autonomy_enabled_topic': LaunchConfiguration('autonomy_enabled_topic'),
+            },
+        ],
+        condition=IfCondition(LaunchConfiguration('launch_throttle_interpolator')),
     )
     vesc_to_odom_node = Node(
         package='vesc_ackermann',
@@ -481,6 +500,7 @@ def generate_launch_description():
     ld.add_action(joy_teleop_node)
     ld.add_action(autonomy_toggle_node)
     ld.add_action(ackermann_to_vesc_node)
+    ld.add_action(throttle_interpolator_node)
     ld.add_action(vesc_to_odom_node)
     ld.add_action(hall_wheel_odom_node)
     ld.add_action(vesc_driver_node)

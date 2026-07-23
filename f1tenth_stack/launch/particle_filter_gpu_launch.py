@@ -153,6 +153,16 @@ def generate_launch_description():
         default_value='true',
         description='Launch the IMU/wheel odom fusion node',
     )
+    launch_throttle_interpolator_la = DeclareLaunchArgument(
+        'launch_throttle_interpolator',
+        default_value='false',
+        description='Launch the throttle interpolator between unsmoothed and driver speed topics',
+    )
+    motor_speed_output_topic_la = DeclareLaunchArgument(
+        'motor_speed_output_topic',
+        default_value='commands/motor/speed',
+        description='Output topic used by ackermann_to_vesc for motor speed commands',
+    )
     launch_bno085_i2c_la = DeclareLaunchArgument(
         'launch_bno085_i2c',
         default_value='false',
@@ -205,6 +215,8 @@ def generate_launch_description():
             'launch_usb_imu': 'false',
             'launch_bno085_i2c': LaunchConfiguration('launch_bno085_i2c'),
             'launch_imu_fusion': LaunchConfiguration('launch_imu_fusion'),
+            'launch_throttle_interpolator': LaunchConfiguration('launch_throttle_interpolator'),
+            'motor_speed_output_topic': LaunchConfiguration('motor_speed_output_topic'),
             'imu_fusion_config': LaunchConfiguration('imu_fusion_config'),
             'imu_topic': '/sensors/imu/raw',
             'imu_fused_odom_topic': '/odometry/imu_fused',
@@ -236,6 +248,7 @@ def generate_launch_description():
             'autonomy_toggle_startup_enabled': LaunchConfiguration(
                 'autonomy_toggle_startup_enabled'
             ),
+            'motor_speed_output_topic': 'commands/motor/unsmoothed_speed',
         }.items(),
     )
 
@@ -283,6 +296,8 @@ def generate_launch_description():
             secondary_imu_timeout_sec_la,
             prefer_secondary_imu_on_yaw_disagreement_la,
             imu_fusion_config_la,
+            launch_throttle_interpolator_la,
+            motor_speed_output_topic_la,
             launch_imu_fusion_la,
             launch_bno085_i2c_la,
             launch_autonomy_toggle_la,

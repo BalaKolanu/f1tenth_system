@@ -39,6 +39,7 @@ setup(
             'bno085_i2c_node = f1tenth_stack.bno085_i2c_node:main',
             'safe_rosbridge_websocket = f1tenth_stack.safe_rosbridge_websocket:main',
             'autonomy_toggle = f1tenth_stack.autonomy_toggle:main',
+            'throttle_interpolator = f1tenth_stack.throttle_interpolator:main',
         ],
     },
 )
