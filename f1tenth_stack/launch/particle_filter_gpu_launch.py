@@ -41,7 +41,7 @@ def generate_launch_description():
         'config',
         'localize.yaml',
     )
-    default_map_yaml = '/home/nvidia/spring26_ws/maps/apt_floor_2.yaml'
+    default_map_yaml = '/home/nvidia/f1tenth_ws/maps/apt_floor_2.yaml'
     vesc_imu_fusion_config = os.path.join(
         f1tenth_share,
         'config',
