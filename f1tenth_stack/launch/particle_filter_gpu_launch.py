@@ -78,6 +78,16 @@ def generate_launch_description():
         default_value='/odom',
         description='Odometry topic consumed by the particle filter',
     )
+    wait_for_jax_ready_la = DeclareLaunchArgument(
+        'wait_for_jax_ready',
+        default_value='false',
+        description='Wait for MPCC JAX readiness before initializing particle-filter GPU state',
+    )
+    jax_ready_topic_la = DeclareLaunchArgument(
+        'jax_ready_topic',
+        default_value='/mpcc/jax_ready',
+        description='Latched MPCC JAX readiness topic consumed by particle_filter',
+    )
     vesc_driver_log_level_la = DeclareLaunchArgument(
         'vesc_driver_log_level',
         default_value='warn',
@@ -257,6 +267,8 @@ def generate_launch_description():
             'localize_config': LaunchConfiguration('localize_config'),
             'map_yaml': LaunchConfiguration('map_yaml'),
             'odometry_topic': LaunchConfiguration('odometry_topic'),
+            'wait_for_jax_ready': LaunchConfiguration('wait_for_jax_ready'),
+            'jax_ready_topic': LaunchConfiguration('jax_ready_topic'),
         }.items(),
     )
 
@@ -275,6 +287,8 @@ def generate_launch_description():
             localize_config_la,
             map_yaml_la,
             odometry_topic_la,
+            wait_for_jax_ready_la,
+            jax_ready_topic_la,
             vesc_driver_log_level_la,
             mux_config_la,
             sensors_config_la,
