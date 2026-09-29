@@ -75,6 +75,21 @@ def generate_launch_description():
         'joy_config',
         default_value=joy_teleop_config,
         description='Descriptions for joy and joy_teleop configs')
+    launch_joy_la = DeclareLaunchArgument(
+        'launch_joy', default_value='true',
+        description='Launch the physical joystick driver')
+    launch_joy_teleop_la = DeclareLaunchArgument(
+        'launch_joy_teleop', default_value='true',
+        description='Launch joystick-to-Ackermann teleoperation')
+    launch_foxglove_teleop_la = DeclareLaunchArgument(
+        'launch_foxglove_teleop', default_value='false',
+        description='Launch Foxglove Twist-to-Ackermann teleoperation')
+    foxglove_teleop_input_topic_la = DeclareLaunchArgument(
+        'foxglove_teleop_input_topic', default_value='/foxglove/teleop',
+        description='Twist topic published by the Foxglove teleop panel')
+    foxglove_teleop_output_topic_la = DeclareLaunchArgument(
+        'foxglove_teleop_output_topic', default_value='teleop',
+        description='Ackermann topic consumed by the command mux')
     vesc_la = DeclareLaunchArgument(
         'vesc_config',
         default_value=vesc_config,
@@ -281,7 +296,10 @@ def generate_launch_description():
         description='Target frame for TF speed monitor')
     ld = LaunchDescription(
         [
-            joy_la, vesc_la, sensors_la, mux_la, usb_imu_la, bno085_i2c_la,
+            joy_la, launch_joy_la, launch_joy_teleop_la,
+            launch_foxglove_teleop_la, foxglove_teleop_input_topic_la,
+            foxglove_teleop_output_topic_la, vesc_la, sensors_la, mux_la,
+            usb_imu_la, bno085_i2c_la,
             imu_fusion_la, imu_frame_id_la, vesc_imu_frame_id_la, launch_usb_imu_la, launch_bno085_i2c_la, launch_imu_fusion_la,
             launch_autonomy_toggle_la, autonomy_toggle_joy_topic_la,
             autonomy_toggle_button_index_la, autonomy_enabled_topic_la,
@@ -308,13 +326,28 @@ def generate_launch_description():
         package='joy',
         executable='joy_node',
         name='joy',
-        parameters=[LaunchConfiguration('joy_config')]
+        parameters=[LaunchConfiguration('joy_config')],
+        condition=IfCondition(LaunchConfiguration('launch_joy')),
     )
     joy_teleop_node = Node(
         package='joy_teleop',
         executable='joy_teleop',
         name='joy_teleop',
-        parameters=[LaunchConfiguration('joy_config')]
+        parameters=[LaunchConfiguration('joy_config')],
+        condition=IfCondition(LaunchConfiguration('launch_joy_teleop')),
+    )
+    foxglove_teleop_node = Node(
+        package='f1tenth_stack',
+        executable='foxglove_teleop',
+        name='foxglove_teleop',
+        output='screen',
+        parameters=[
+            {
+                'input_topic': LaunchConfiguration('foxglove_teleop_input_topic'),
+                'output_topic': LaunchConfiguration('foxglove_teleop_output_topic'),
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration('launch_foxglove_teleop')),
     )
     autonomy_toggle_node = Node(
         package='f1tenth_stack',
@@ -480,6 +513,7 @@ def generate_launch_description():
     # finalize
     ld.add_action(joy_node)
     ld.add_action(joy_teleop_node)
+    ld.add_action(foxglove_teleop_node)
     ld.add_action(autonomy_toggle_node)
     ld.add_action(ackermann_to_vesc_node)
     ld.add_action(vesc_to_odom_node)

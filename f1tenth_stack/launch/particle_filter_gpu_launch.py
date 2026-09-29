@@ -178,6 +178,26 @@ def generate_launch_description():
         default_value='true',
         description='Launch system autonomy start/stop toggle publisher',
     )
+    launch_joy_la = DeclareLaunchArgument(
+        'launch_joy', default_value='true',
+        description='Launch the physical joystick driver',
+    )
+    launch_joy_teleop_la = DeclareLaunchArgument(
+        'launch_joy_teleop', default_value='true',
+        description='Launch joystick-to-Ackermann teleoperation',
+    )
+    launch_foxglove_teleop_la = DeclareLaunchArgument(
+        'launch_foxglove_teleop', default_value='false',
+        description='Launch Foxglove Twist-to-Ackermann teleoperation',
+    )
+    foxglove_teleop_input_topic_la = DeclareLaunchArgument(
+        'foxglove_teleop_input_topic', default_value='/foxglove/teleop',
+        description='Twist topic published by the Foxglove teleop panel',
+    )
+    foxglove_teleop_output_topic_la = DeclareLaunchArgument(
+        'foxglove_teleop_output_topic', default_value='teleop',
+        description='Ackermann topic consumed by the command mux',
+    )
     autonomy_toggle_joy_topic_la = DeclareLaunchArgument(
         'autonomy_toggle_joy_topic',
         default_value='/joy',
@@ -243,6 +263,15 @@ def generate_launch_description():
             'launch_static_tf': 'true',
             'vesc_driver_log_level': LaunchConfiguration('vesc_driver_log_level'),
             'launch_autonomy_toggle': LaunchConfiguration('launch_autonomy_toggle'),
+            'launch_joy': LaunchConfiguration('launch_joy'),
+            'launch_joy_teleop': LaunchConfiguration('launch_joy_teleop'),
+            'launch_foxglove_teleop': LaunchConfiguration('launch_foxglove_teleop'),
+            'foxglove_teleop_input_topic': LaunchConfiguration(
+                'foxglove_teleop_input_topic'
+            ),
+            'foxglove_teleop_output_topic': LaunchConfiguration(
+                'foxglove_teleop_output_topic'
+            ),
             'autonomy_toggle_joy_topic': LaunchConfiguration('autonomy_toggle_joy_topic'),
             'autonomy_toggle_button_index': LaunchConfiguration(
                 'autonomy_toggle_button_index'
@@ -307,6 +336,8 @@ def generate_launch_description():
             launch_imu_fusion_la,
             launch_bno085_i2c_la,
             launch_autonomy_toggle_la,
+            launch_joy_la, launch_joy_teleop_la, launch_foxglove_teleop_la,
+            foxglove_teleop_input_topic_la, foxglove_teleop_output_topic_la,
             autonomy_toggle_joy_topic_la,
             autonomy_toggle_button_index_la,
             autonomy_enabled_topic_la,

@@ -20,6 +20,11 @@ def generate_launch_description():
         default_value="5.0",
         description="Seconds to wait before retrying port bind on startup",
     )
+    max_message_size_arg = DeclareLaunchArgument(
+        "max_message_size",
+        default_value="10000000",
+        description="Largest unfragmented rosbridge message in bytes",
+    )
 
     rosbridge_node = Node(
         package="f1tenth_stack",
@@ -31,6 +36,9 @@ def generate_launch_description():
                 "port": LaunchConfiguration("port"),
                 "address": LaunchConfiguration("address"),
                 "retry_startup_delay": LaunchConfiguration("retry_startup_delay"),
+                # /map is about 1.4 MB when sent with cbor-raw. The rosbridge
+                # fragmentation path cannot serialize cbor-raw byte payloads.
+                "max_message_size": LaunchConfiguration("max_message_size"),
             }
         ],
     )
@@ -47,6 +55,7 @@ def generate_launch_description():
             port_arg,
             address_arg,
             retry_startup_delay_arg,
+            max_message_size_arg,
             rosbridge_node,
             rosapi_node,
         ]

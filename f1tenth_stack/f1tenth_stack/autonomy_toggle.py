@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Empty
 
 
 def _as_bool(value):
@@ -21,12 +21,16 @@ class AutonomyToggle(Node):
         self.declare_parameter('joy_topic', '/joy')
         self.declare_parameter('button_index', 5)
         self.declare_parameter('enabled_topic', '/safety/autonomy_enabled')
+        self.declare_parameter('toggle_topic', '/safety/autonomy_toggle')
+        self.declare_parameter('set_topic', '/safety/autonomy_set')
         self.declare_parameter('publish_hz', 20.0)
         self.declare_parameter('startup_enabled', False)
 
         self.joy_topic = str(self.get_parameter('joy_topic').value)
         self.button_index = int(self.get_parameter('button_index').value)
         self.enabled_topic = str(self.get_parameter('enabled_topic').value)
+        self.toggle_topic = str(self.get_parameter('toggle_topic').value)
+        self.set_topic = str(self.get_parameter('set_topic').value)
         publish_hz = max(1.0, float(self.get_parameter('publish_hz').value))
 
         self.enabled = _as_bool(self.get_parameter('startup_enabled').value)
@@ -34,14 +38,19 @@ class AutonomyToggle(Node):
 
         self.pub = self.create_publisher(Bool, self.enabled_topic, 10)
         self.create_subscription(Joy, self.joy_topic, self.joy_callback, 10)
+        self.create_subscription(Empty, self.toggle_topic, self.toggle_callback, 10)
+        self.create_subscription(Bool, self.set_topic, self.set_callback, 10)
         self.create_timer(1.0 / publish_hz, self.publish_state)
 
         self.get_logger().info(
-            'Autonomy toggle ready. button=%d joy=%s topic=%s startup=%s'
+            'Autonomy toggle ready. button=%d joy=%s state_topic=%s '
+            'toggle_topic=%s set_topic=%s startup=%s'
             % (
                 self.button_index,
                 self.joy_topic,
                 self.enabled_topic,
+                self.toggle_topic,
+                self.set_topic,
                 str(self.enabled).lower(),
             )
         )
@@ -53,11 +62,26 @@ class AutonomyToggle(Node):
         )
 
         if pressed and not self.last_button_pressed:
-            self.enabled = not self.enabled
-            state = 'ENABLED' if self.enabled else 'DISABLED'
-            self.get_logger().info('Autonomy toggle switched: %s' % state)
+            self.toggle('joystick')
 
         self.last_button_pressed = pressed
+
+    def toggle_callback(self, _msg: Empty):
+        self.toggle('keyboard')
+
+    def set_callback(self, msg: Bool):
+        self.enabled = bool(msg.data)
+        self.publish_state()
+        state = 'ENABLED' if self.enabled else 'DISABLED'
+        self.get_logger().info('Autonomy state set externally: %s' % state)
+
+    def toggle(self, source: str):
+        self.enabled = not self.enabled
+        state = 'ENABLED' if self.enabled else 'DISABLED'
+        self.publish_state()
+        self.get_logger().info(
+            'Autonomy toggle switched by %s: %s' % (source, state)
+        )
 
     def publish_state(self):
         msg = Bool()
