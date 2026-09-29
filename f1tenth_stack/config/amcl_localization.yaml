@@ -16,7 +16,7 @@ amcl:
     max_beams: 100
 
     min_particles: 1000
-    max_particles: 4000
+    max_particles: 2000
     pf_err: 0.02
     pf_z: 0.99
     resample_interval: 1
