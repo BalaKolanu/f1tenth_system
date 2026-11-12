@@ -2,12 +2,12 @@
   # general parameters shared by all vesc-related nodes
   ros__parameters:
     # erpm (electrical rpm) = speed_to_erpm_gain * speed (meters / second) + speed_to_erpm_offset
-    speed_to_erpm_gain: 4614.0
+    speed_to_erpm_gain: 3278.071192
     speed_to_erpm_offset: 0.0
 
     # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
     steering_angle_to_servo_gain: -1.2135
-    steering_angle_to_servo_offset: 0.5304
+    steering_angle_to_servo_offset: 0.5000
 
     publish_imu: true
     port: /dev/sensors/vesc
@@ -30,6 +30,9 @@
 
 vesc_to_odom_node:
   ros__parameters:
+    # Match the archived RaceStack odometry calibration.
+    speed_to_erpm_gain: -3278.071192
+    speed_to_erpm_offset: 0.0
     odom_frame: odom
     base_frame: base_link
     # publish odom to base link tf
