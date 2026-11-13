@@ -8,29 +8,51 @@
     # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
     steering_angle_to_servo_gain: -1.2135
     steering_angle_to_servo_offset: 0.5000
-
-    publish_imu: true
-    port: /dev/sensors/vesc
+    port: /dev/serial/by-id/usb-STMicroelectronics_ChibiOS_RT_Virtual_COM_Port_304-if00
     duty_cycle_min: 0.0
     duty_cycle_max: 0.0
     current_min: 0.0
     current_max: 100.0
-    brake_min: -20000.0
+    brake_min: 0.0
     brake_max: 200000.0
-    speed_min: -23250.0
-    speed_max: 23250.0
+    speed_min: -50000.0
+    speed_max: 50000.0
     position_min: 0.0
     position_max: 0.0
-    servo_min: 0.15
-    servo_max: 0.85
+    servo_min: 0.0
+    servo_max: 1.0
+    # The onboard VESC IMU is the car's primary IMU source.
+    publish_imu: true
+    brake_speed_holdoff_sec: 0.10
 
 # No longer needed, all parameters are shared
 # ackermann_to_vesc_node:
 #   ros__parameters:
 
+ackermann_to_vesc_node:
+  ros__parameters:
+    command_timeout_sec: 0.25
+    command_timeout_brake_current: 0.0
+    active_braking_enabled: false
+    runtime_active_braking_default_enabled: false
+    active_braking_enable_topic: /safety/vesc_active_braking_enabled
+    active_braking_enable_timeout_sec: 0.5
+    active_brake_min_current: 1.0
+    active_brake_max_current: 9.0
+    brake_current_per_decel: 1.2
+    brake_current_per_speed_error: 2.4
+    default_decel_mps2: 1.0
+    brake_enter_speed_error_mps: 0.05
+    brake_release_speed_error_mps: 0.02
+    brake_min_vehicle_speed_mps: 0.05
+    brake_current_slew_rate_aps: 40.0
+    vesc_state_topic: sensors/core
+    vesc_state_timeout_sec: 0.25
+
 vesc_to_odom_node:
   ros__parameters:
-    # Match the archived RaceStack odometry calibration.
+    # vesc_to_odom applies an internal leading minus on raw motor speed.
+    # Use negative gain here so forward vehicle motion yields +x odom.
     speed_to_erpm_gain: -3278.071192
     speed_to_erpm_offset: 0.0
     odom_frame: odom
@@ -38,8 +60,8 @@ vesc_to_odom_node:
     # publish odom to base link tf
     publish_tf: true
     use_servo_cmd_to_calc_angular_velocity: true
-    # car wheelbase is about 25cm
-    wheelbase: 0.324
+    # car wheelbase is about 32.4cm
+    wheelbase: .324
 
 # No longer needed, all parameters are shared
 # vesc_driver:
@@ -53,7 +75,7 @@ throttle_interpolator:
     servo_output_topic: commands/servo/position
 
     # servo smoother - limits acceleration and smooths anything above limit
-    max_acceleration: 2.5 # meters/second^2
+    max_acceleration: 5.0 # meters/second^2
     throttle_smoother_rate: 75.0 # messages/sec
     # servo smoother - limits rotation speed and smooths anything above limit
     max_servo_speed: 3.2 # radians/second
