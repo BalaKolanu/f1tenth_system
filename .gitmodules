@@ -1,6 +1,6 @@
 [submodule "vesc"]
 	path = vesc
-	url = https://github.com/BalaKolanu/vesc.git
+	url = git@github.com:BalaKolanu/vesc.git
 	branch = main
 [submodule "ackermann_mux"]
 	path = ackermann_mux
